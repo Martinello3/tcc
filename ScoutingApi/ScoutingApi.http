@@ -1,0 +1,6 @@
+@ScoutingApi_HostAddress = http://localhost:5258
+
+GET {{ScoutingApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,89 @@
+# ------------------------------------------------------------
+# Global/OS
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.temp
+
+# ------------------------------------------------------------
+# IDE/Editors
+# ------------------------------------------------------------
+.vscode/
+.idea/
+*.iml
+.ReSharper*/
+*_ReSharper*/
+*.DotSettings.user
+
+# ------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------
+*.log
+logs/
+log/
+
+# ------------------------------------------------------------
+# Node/Angular (frontend)
+# ------------------------------------------------------------
+node_modules/
+**/node_modules/
+
+# Build outputs
+ScountingFrontend/dist/
+**/dist/
+.tmp/
+coverage/
+
+# Angular cache/config
+ScountingFrontend/.angular/
+.eslintcache
+
+# Env files (local only)
+.env
+.env.*
+.env.local
+.env.*.local
+ScountingFrontend/.env
+ScountingFrontend/.env.*
+ScountingFrontend/.env.local
+ScountingFrontend/.env.*.local
+
+# ------------------------------------------------------------
+# .NET / C# (backend)
+# ------------------------------------------------------------
+# Build outputs
+[Bb]in/
+[Oo]bj/
+
+# VS / build artifacts
+.vs/
+*.user
+*.suo
+*.cache
+*.dbmdl
+*.jfm
+
+# NCrunch
+*.ncrunch*
+*NCrunch*.*
+
+# Rider cache
+.idea/.idea.*
+
+# Local appsettings overrides (keep standard appsettings.* under version control)
+appsettings.Local.json
+*.Secrets.json
+
+# ------------------------------------------------------------
+# Misc
+# ------------------------------------------------------------
+# Package manager caches
+.pnpm-store/
+.npm/
+.yarn/
+
+temp/
+tmp/
+
