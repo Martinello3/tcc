@@ -1,16 +1,18 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterLink, RouterOutlet],
   styles: [`
   .sidebar { width: 260px; }
-  .menu-item { cursor: pointer; }
-  .menu-item:hover { background-color: #f8f9fa; }
+  .menu-item { cursor: pointer; border-radius: .5rem; padding: .5rem .5rem; transition: background-color .2s ease; }
+  .menu-item:hover { background-color: #f1f3f5; }
+  .menu-item.active { background-color: #e9f7ef; color: #198754; font-weight: 600; }
+  .menu-link { text-decoration: none; color: inherit; display: flex; align-items: center; gap: .5rem; width: 100%; }
   `],
   template: `
 <div class="d-flex min-vh-100">
@@ -22,33 +24,47 @@ import { AuthService } from '../../auth/auth.service';
     </div>
     <div class="text-muted text-uppercase small mb-2">Navegação</div>
     <ul class="list-unstyled">
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-people me-2"></i>
-        Jogadores
+      <li class="menu-item" (click)="go('/jogadores')">
+        <a class="menu-link" routerLink="/jogadores">
+          <i class="bi bi-people"></i>
+          <span>Jogadores</span>
+        </a>
       </li>
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-clipboard2-check me-2"></i>
-        Avaliações
+      <li class="menu-item" (click)="go('/avaliacoes')">
+        <a class="menu-link" routerLink="/avaliacoes">
+          <i class="bi bi-clipboard2-check"></i>
+          <span>Avaliações</span>
+        </a>
       </li>
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-hospital me-2"></i>
-        Lesões
+      <li class="menu-item" (click)="go('/lesoes')">
+        <a class="menu-link" routerLink="/lesoes">
+          <i class="bi bi-hospital"></i>
+          <span>Lesões</span>
+        </a>
       </li>
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-building me-2"></i>
-        Clubes
+      <li class="menu-item" (click)="go('/clubes')">
+        <a class="menu-link" routerLink="/clubes">
+          <i class="bi bi-building"></i>
+          <span>Clubes</span>
+        </a>
       </li>
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-film me-2"></i>
-        Vídeos
+      <li class="menu-item" (click)="go('/videos')">
+        <a class="menu-link" routerLink="/videos">
+          <i class="bi bi-film"></i>
+          <span>Vídeos</span>
+        </a>
       </li>
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-file-earmark-text me-2"></i>
-        Relatórios
+      <li class="menu-item" (click)="go('/relatorios')">
+        <a class="menu-link" routerLink="/relatorios">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Relatórios</span>
+        </a>
       </li>
-      <li class="menu-item rounded px-2 py-2 d-flex align-items-center">
-        <i class="bi bi-person-circle me-2"></i>
-        <a class="text-decoration-none" routerLink="/profile">Perfil</a>
+      <li class="menu-item" (click)="go('/profile')">
+        <a class="menu-link" routerLink="/profile">
+          <i class="bi bi-person-circle"></i>
+          <span>Perfil</span>
+        </a>
       </li>
     </ul>
     <div class="border-top mt-3 pt-3">
@@ -77,59 +93,8 @@ import { AuthService } from '../../auth/auth.service';
         <button class="btn btn-outline-secondary btn-sm" (click)="onLogout()"><i class="bi bi-box-arrow-right"></i> Sair</button>
       </div>
     </header>
-    <main class="p-3">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-graph-up-arrow text-success" style="font-size: 2rem"></i>
-                <div class="ms-2">
-                  <div class="text-muted small">Relatórios recentes</div>
-                  <div class="fs-5 fw-semibold">12</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-person-bounding-box text-success" style="font-size: 2rem"></i>
-                <div class="ms-2">
-                  <div class="text-muted small">Jogadores avaliados</div>
-                  <div class="fs-5 fw-semibold">34</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-camera-reels text-success" style="font-size: 2rem"></i>
-                <div class="ms-2">
-                  <div class="text-muted small">Vídeos recentes</div>
-                  <div class="fs-5 fw-semibold">6</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card shadow-sm mt-3">
-        <div class="card-header bg-white">
-          <strong>Atalhos</strong>
-        </div>
-        <div class="card-body d-flex gap-2 flex-wrap">
-          <button class="btn btn-outline-success"><i class="bi bi-person-plus"></i> Novo jogador</button>
-          <button class="btn btn-outline-success"><i class="bi bi-clipboard2-plus"></i> Nova avaliação</button>
-          <button class="btn btn-outline-success"><i class="bi bi-upload"></i> Enviar vídeo</button>
-        </div>
-      </div>
+    <main class="p-3 position-relative">
+      <router-outlet />
     </main>
   </div>
 </div>
@@ -139,6 +104,10 @@ export class HomeComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
   user = this.auth.user();
+
+  go(path: string) {
+    this.router.navigate([path]);
+  }
 
   onLogout() {
     this.auth.logout();

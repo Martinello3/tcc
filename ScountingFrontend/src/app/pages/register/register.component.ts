@@ -3,11 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
+import { DialogService } from '../../services/dialog.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-register',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
+  styles: [`
+    .spinner { width: 1rem; height: 1rem; border-width: .2rem; }
+  `],
   template: `
 <div class="min-vh-100 d-flex align-items-center justify-content-center bg-success-subtle">
   <div class="card shadow" style="max-width: 520px; width: 100%">
@@ -40,7 +45,10 @@ import { AuthService } from '../../auth/auth.service';
             <small class="text-muted">Perfil padrão: Olheiro</small>
           </div>
           <div class="col-12 d-grid">
-            <button class="btn btn-success" [disabled]="f.invalid">Cadastrar</button>
+            <button class="btn btn-success d-inline-flex align-items-center justify-content-center gap-2" [disabled]="f.invalid || loading">
+              @if (loading) { <span class="spinner-border spinner" role="status"></span> }
+              <span>{{ loading ? 'Cadastrando...' : 'Cadastrar' }}</span>
+            </button>
           </div>
         </div>
       </form>
@@ -56,24 +64,32 @@ import { AuthService } from '../../auth/auth.service';
 export class RegisterComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private dialog = inject(DialogService);
+  private toast = inject(ToastService);
 
   nome = '';
   email = '';
   senha = '';
   confirmar = '';
+  loading = false;
 
-  onSubmit() {
+  async onSubmit() {
+    if (this.loading) return;
     if (this.senha !== this.confirmar) {
-      alert('As senhas não conferem');
+      await this.dialog.alert('As senhas não conferem');
       return;
     }
 
+    this.loading = true;
     this.auth.register({ nome: this.nome, email: this.email, senha: this.senha, perfil: 'O' }).subscribe({
       next: () => {
-        alert('Conta criada com sucesso. Faça login.');
+        this.toast.success('Conta criada com sucesso. Faça login.');
         this.router.navigate(['/login']);
       },
-      error: (err) => alert(err?.error?.message ?? 'Falha ao criar conta')
+      error: (err) => this.toast.error(err?.error?.message ?? 'Falha ao criar conta'),
+      complete: () => {
+        this.loading = false;
+      }
     });
   }
 }

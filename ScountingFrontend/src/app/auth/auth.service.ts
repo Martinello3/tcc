@@ -30,6 +30,10 @@ export class AuthService {
     return this.isLoggedIn();
   }
 
+  token() {
+    return this._token();
+  }
+
   login(email: string, password: string) {
     return this.http.post<LoginResponse>('/api/auth/login', { email, senha: password });
   }

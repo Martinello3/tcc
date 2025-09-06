@@ -5,12 +5,13 @@ using ScoutingApi.Models;
 
 namespace ScoutingApi.Controllers;
 
+[ApiController]
+[Route("api/[controller]")]
 public class JogadoresController(ScoutingDbContext db) : ControllerBase
 {
     private readonly ScoutingDbContext _db = db;
 
     [HttpGet]
-    [Route("api/[controller]")]
     public async Task<ActionResult<IEnumerable<Jogador>>> GetAll()
     {
         var list = await _db.Jogadores
@@ -20,7 +21,7 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
         return Ok(list);
     }
 
-    [HttpGet("api/[controller]/{id:int}")]
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<Jogador>> GetById(int id)
     {
         var entity = await _db.Jogadores
@@ -29,7 +30,7 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
         return entity is null ? NotFound() : Ok(entity);
     }
 
-    [HttpPost("api/[controller]")]
+    [HttpPost]
     public async Task<ActionResult<Jogador>> Create(Jogador entity)
     {
         _db.Jogadores.Add(entity);
@@ -37,7 +38,7 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
     }
 
-    [HttpPut("api/[controller]/{id:int}")]
+    [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, Jogador entity)
     {
         entity.Id = id;
@@ -46,7 +47,7 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("api/[controller]/{id:int}")]
+    [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await _db.Jogadores.FindAsync(id);
