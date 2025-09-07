@@ -36,22 +36,10 @@ import { AuthService } from '../../auth/auth.service';
           <span>Avaliações</span>
         </a>
       </li>
-      <li class="menu-item" (click)="go('/lesoes')">
-        <a class="menu-link" routerLink="/lesoes">
-          <i class="bi bi-hospital"></i>
-          <span>Lesões</span>
-        </a>
-      </li>
       <li class="menu-item" (click)="go('/clubes')">
         <a class="menu-link" routerLink="/clubes">
           <i class="bi bi-building"></i>
           <span>Clubes</span>
-        </a>
-      </li>
-      <li class="menu-item" (click)="go('/videos')">
-        <a class="menu-link" routerLink="/videos">
-          <i class="bi bi-film"></i>
-          <span>Vídeos</span>
         </a>
       </li>
       <li class="menu-item" (click)="go('/relatorios')">

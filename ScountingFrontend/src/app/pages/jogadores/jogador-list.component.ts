@@ -5,6 +5,7 @@ import type { Jogador } from '../../models/player';
 import { JogadoresFacade } from '../../facades/jogadores.facade';
 import { ToastService } from '../../services/toast.service';
 import { DialogService } from '../../services/dialog.service';
+import { ClubesService } from '../../services/clubes.service';
 
 @Component({
   selector: 'app-jogador-list',
@@ -49,6 +50,8 @@ import { DialogService } from '../../services/dialog.service';
             <th>Posição</th>
             <th>Nacionalidade</th>
             <th>Clube Atual</th>
+            <th>Data Nasc.</th>
+
             <th style="width: 160px" class="text-end">Ações</th>
           </tr>
         </thead>
@@ -58,7 +61,8 @@ import { DialogService } from '../../services/dialog.service';
               <td class="fw-semibold">{{ j.nome }}</td>
               <td><span class="badge text-bg-light">{{ j.posicao || '-' }}</span></td>
               <td>{{ j.nacionalidade || '-' }}</td>
-              <td>{{ j.clubeAtual?.nome || '-' }}</td>
+              <td>{{ j.clubeAtual?.nome || clubesById.get(j.clubeAtualId || -1) || '-' }}</td>
+              <td>{{ j.dataNascimento | date:'dd/MM/yyyy' }}</td>
               <td class="text-end">
                 <a class="btn btn-sm btn-outline-primary me-1" [routerLink]="['/jogadores', j.id]">Editar</a>
                 <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" (click)="onDelete(j)" [disabled]="facade.removingId() === j.id">
@@ -79,6 +83,9 @@ export class JogadorListComponent implements OnInit {
   facade = inject(JogadoresFacade);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private clubesSvc = inject(ClubesService);
+  clubesById = new Map<number, string>();
+
   private dialog = inject(DialogService);
 
   jogadores = this.facade.items;
@@ -87,6 +94,10 @@ export class JogadorListComponent implements OnInit {
 
   ngOnInit() {
     this.facade.load();
+    // Carrega clubes para garantir nome mesmo que o jogador venha sem navegação
+    this.clubesSvc.list().subscribe({ next: (res) => {
+      res.forEach(c => this.clubesById.set(c.id, c.nome));
+    }});
   }
 
   onFilter(value: string) {

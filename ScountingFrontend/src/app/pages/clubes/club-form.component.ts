@@ -27,13 +27,14 @@ import { ToastService } from '../../services/toast.service';
     <form [formGroup]="form" class="row g-3">
       <div class="col-md-6">
         <label class="form-label">Nome</label>
-        <input class="form-control" formControlName="nome" />
+        <input class="form-control" [class.is-invalid]="form.controls.nome.invalid && form.controls.nome.touched" formControlName="nome" />
+        <div class="invalid-feedback" [hidden]="!(form.controls.nome.errors?.['required'] && form.controls.nome.touched)">Informe o nome do clube.</div>
       </div>
       <div class="col-md-6">
         <label class="form-label">País</label>
         <select class="form-select" formControlName="pais">
           <option value="">- Selecionar -</option>
-          <option *ngFor="let p of paises" [value]="p">{{ p }}</option>
+          @for (p of paises; track p) { <option [value]="p">{{ p }}</option> }
         </select>
       </div>
       @if (showEstados) {
@@ -41,7 +42,7 @@ import { ToastService } from '../../services/toast.service';
           <label class="form-label">Estado</label>
           <select class="form-select" formControlName="estado">
             <option value="">- Selecionar -</option>
-            <option *ngFor="let e of estados" [value]="e">{{ e }}</option>
+            @for (e of estados; track e) { <option [value]="e">{{ e }}</option> }
           </select>
         </div>
       } @else {

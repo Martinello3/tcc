@@ -33,6 +33,21 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Jogador>> Create(Jogador entity)
     {
+        // Normaliza altura/peso
+        if (entity.Altura.HasValue)
+        {
+            if (entity.Altura.Value >= 10 && entity.Altura.Value <= 300) // cm informado
+                entity.Altura = Math.Round(entity.Altura.Value / 100M, 2);
+            if (entity.Altura.Value > 9.99M)
+                entity.Altura = 9.99M;
+            if (entity.Altura.Value < 0)
+                entity.Altura = 0;
+        }
+        if (entity.Peso.HasValue)
+        {
+            if (entity.Peso.Value < 0) entity.Peso = 0;
+            if (entity.Peso.Value > 999.99M) entity.Peso = 999.99M;
+        }
         _db.Jogadores.Add(entity);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
@@ -42,6 +57,21 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     public async Task<IActionResult> Update(int id, Jogador entity)
     {
         entity.Id = id;
+        // Normaliza altura/peso como no Create
+        if (entity.Altura.HasValue)
+        {
+            if (entity.Altura.Value >= 10 && entity.Altura.Value <= 300) // cm informado
+                entity.Altura = Math.Round(entity.Altura.Value / 100M, 2);
+            if (entity.Altura.Value > 9.99M)
+                entity.Altura = 9.99M;
+            if (entity.Altura.Value < 0)
+                entity.Altura = 0;
+        }
+        if (entity.Peso.HasValue)
+        {
+            if (entity.Peso.Value < 0) entity.Peso = 0;
+            if (entity.Peso.Value > 999.99M) entity.Peso = 999.99M;
+        }
         _db.Entry(entity).State = EntityState.Modified;
         await _db.SaveChangesAsync();
         return NoContent();

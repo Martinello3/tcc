@@ -1,0 +1,317 @@
+<div class="d-flex align-items-center justify-content-between mb-3">
+
+  <h5 class="mb-0">{{ id ? 'Editar jogador' : 'Novo jogador' }}</h5>
+  <div class="page-header-actions">
+    <button type="button" class="btn btn-outline-secondary" (click)="goBack()">Voltar</button>
+    <button class="btn btn-success d-inline-flex align-items-center gap-2" (click)="onSave()" [disabled]="form.invalid || saving">
+      <ng-container *ngIf="!saving; else savingTpl">Salvar</ng-container>
+      <ng-template #savingTpl>
+        <span class="spinner-border spinner-border-sm" role="status"></span>
+        <span>Salvando...</span>
+      </ng-template>
+    </button>
+  </div>
+</div>
+
+<nav class="mb-3">
+  <ul class="nav nav-tabs">
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="activeTab==='dados'" (click)="!saving && (activeTab='dados')" [disabled]="saving">Dados</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="activeTab==='lesoes'" (click)="!saving && (activeTab='lesoes')" [disabled]="saving">Lesões</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="activeTab==='videos'" (click)="!saving && (activeTab='videos')" [disabled]="saving">Vídeos</button></li>
+  </ul>
+</nav>
+
+<!-- Aba: Dados -->
+@if (activeTab==='dados') {
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Dados do jogador</strong>
+  </div>
+  <app-loading-overlay [show]="saving"></app-loading-overlay>
+  <div class="card-body">
+    <form [formGroup]="form" class="row g-1">
+      <div class="col-12 col-md-6 col-lg-4">
+        <label class="form-label">Nome</label>
+        <input class="form-control form-control-sm" [class.is-invalid]="form.controls.nome.invalid && form.controls.nome.touched" formControlName="nome" />
+        <div class="invalid-feedback" [hidden]="!(form.controls.nome.errors?.['required'] && form.controls.nome.touched)">Informe o nome.</div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-2">
+        <label class="form-label">Nascimento</label>
+        <input type="date" class="form-control form-control-sm" [class.is-invalid]="form.controls.dataNascimento.invalid && form.controls.dataNascimento.touched" formControlName="dataNascimento" />
+        <div class="invalid-feedback" [hidden]="!(form.controls.dataNascimento.touched && (form.controls.dataNascimento.errors?.['required'] || form.controls.dataNascimento.errors))">
+          @if (form.controls.dataNascimento.errors?.['required']) { Informe a data de nascimento. }
+          @if (form.controls.dataNascimento.errors?.['invalidDate']) { Data inválida. }
+          @if (form.controls.dataNascimento.errors?.['minAge']) { Idade mínima: 13 anos. }
+          @if (form.controls.dataNascimento.errors?.['maxAge']) { Idade máxima: 20 anos. }
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label">Nacionalidade</label>
+        <select class="form-select form-select-sm" formControlName="nacionalidade">
+          <option value="">- Selecionar -</option>
+          @for (n of nacionalidades; track n) {
+            <option [value]="n">{{ n }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-md-6 col-lg-2">
+        <label class="form-label">Altura (m)</label>
+        <input type="number" step="0.01" min="1" max="3" class="form-control form-control-sm" [class.is-invalid]="form.controls.altura.invalid && form.controls.altura.touched" formControlName="altura" />
+        <div class="invalid-feedback" [hidden]="!(form.controls.altura.touched && form.controls.altura.errors)">
+          @if (form.controls.altura.errors?.['min']) { Altura mínima: 1,00m. }
+          @if (form.controls.altura.errors?.['max']) { Altura máxima: 3,00m. }
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-2">
+        <label class="form-label">Peso (kg)</label>
+        <input type="number" step="0.1" min="30" max="200" class="form-control form-control-sm" [class.is-invalid]="form.controls.peso.invalid && form.controls.peso.touched" formControlName="peso" />
+        <div class="invalid-feedback" [hidden]="!(form.controls.peso.touched && form.controls.peso.errors)">
+          @if (form.controls.peso.errors?.['min']) { Peso mínimo: 30kg. }
+          @if (form.controls.peso.errors?.['max']) { Peso máximo: 200kg. }
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label">Posição</label>
+        <select class="form-select form-select-sm" formControlName="posicao">
+          <option value="">- Selecionar -</option>
+          @for (p of posicoes; track p) {
+            <option [value]="p">{{ p }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <label class="form-label">Pé dominante</label>
+        <select class="form-select form-select-sm" formControlName="peDominante">
+          <option value="">- Selecionar -</option>
+          <option value="Destro">Destro</option>
+          <option value="Canhoto">Canhoto</option>
+          <option value="Ambidestro">Ambidestro</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <label class="form-label">Clube atual</label>
+        <select class="form-select form-select-sm" formControlName="clubeAtualId">
+          <option value="">- Nenhum -</option>
+          @for (c of clubes; track c.id) {
+            <option [value]="c.id">{{ c.nome }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Observações</label>
+        <textarea rows="1" class="form-control form-control-sm" formControlName="observacoes"></textarea>
+      </div>
+    </form>
+  </div>
+</div>
+
+}
+
+<!-- Aba: Lesões -->
+@if (activeTab==='lesoes') {
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Lesões do jogador</strong>
+  </div>
+  <div class="card-body">
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-success btn-sm" (click)="openLesaoModal()" [disabled]="saving"><i class="bi bi-plus-lg me-1"></i>Adicionar lesão</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Local</th>
+            <th>Ocorrência</th>
+            <th>Recuperação</th>
+            <th>Descrição</th>
+            <th class="text-end">Ações</th>
+
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of lesoes; track trackId($index, l)) {
+            <tr>
+              <td><span class="badge rounded-pill text-bg-secondary">{{ mapTipo(l.tipoLesao) }}</span></td>
+              <td><span class="badge rounded-pill text-bg-info">{{ mapLocal(l.localCorpo) }}</span></td>
+              <td>{{ l.dataOcorrencia | date:'dd/MM/yyyy' }}</td>
+              <td>{{ l.dataRecuperacao ? (l.dataRecuperacao | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ l.descricao }}</td>
+              <td class="text-end"></td>
+            </tr>
+          }
+          @for (s of stagedLesoes; let i = $index; track i) {
+            <tr class="table-warning">
+              <td>
+                <span class="badge rounded-pill text-bg-warning">(novo)</span>
+                <span class="badge rounded-pill text-bg-secondary ms-1">{{ mapTipo(s.tipoLesao) }}</span>
+              </td>
+              <td><span class="badge rounded-pill text-bg-info">{{ mapLocal(s.localCorpo) }}</span></td>
+              <td>{{ s.dataOcorrencia | date:'dd/MM/yyyy' }}</td>
+              <td>{{ s.dataRecuperacao ? (s.dataRecuperacao | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ s.descricao }}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-danger" title="Remover" (click)="removeStagedLesao(i)" [disabled]="saving">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Aba: Vídeos -->
+@if (activeTab==='videos') {
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Vídeos do jogador</strong>
+  </div>
+  <div class="card-body">
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-success btn-sm" (click)="openVideoModal()" [disabled]="saving"><i class="bi bi-plus-lg me-1"></i>Adicionar vídeo</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Arquivo/URL</th>
+            <th>Marcações</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of videos; track trackId($index, v)) {
+            <tr>
+              <td>{{ v.dataEnvio ? (v.dataEnvio | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ v.caminhoVideo || '-' }}</td>
+              <td>{{ v.marcacoes || '-' }}</td>
+              <td class="text-end"></td>
+            </tr>
+          }
+          @for (s of stagedVideos; let i = $index; track i) {
+            <tr class="table-warning">
+              <td>{{ s.dataEnvio ? (s.dataEnvio | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ s.caminhoVideo || '-' }}</td>
+              <td>{{ s.marcacoes || '-' }}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-danger" title="Remover" (click)="removeStagedVideo(i)" [disabled]="saving">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Modal Lesão -->
+@if (showLesaoModal) {
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35)" (click)="closeLesaoModal()" (keydown.escape)="closeLesaoModal()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Adicionar Lesão</h6>
+        <button type="button" class="btn-close" (click)="closeLesaoModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="lesaoForm" class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Descrição</label>
+            <input class="form-control" [class.is-invalid]="lesaoForm.controls.descricao.invalid && lesaoForm.controls.descricao.touched" formControlName="descricao" />
+            <div class="invalid-feedback" [hidden]="!(lesaoForm.controls.descricao.errors?.['required'] && lesaoForm.controls.descricao.touched)">Informe a descrição.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Ocorrência</label>
+            <input type="date" class="form-control" [class.is-invalid]="lesaoForm.controls.dataOcorrencia.invalid && lesaoForm.controls.dataOcorrencia.touched" formControlName="dataOcorrencia" />
+            <div class="invalid-feedback" [hidden]="!(lesaoForm.controls.dataOcorrencia.errors?.['required'] && lesaoForm.controls.dataOcorrencia.touched)">Informe a data de ocorrência.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Recuperação</label>
+            <input type="date" class="form-control" [class.is-invalid]="lesaoForm.controls.dataRecuperacao.touched && lesaoForm.controls.dataRecuperacao.value && lesaoForm.controls.dataRecuperacao.value < lesaoForm.controls.dataOcorrencia.value" formControlName="dataRecuperacao" />
+            <div class="invalid-feedback" [hidden]="!(lesaoForm.controls.dataRecuperacao.touched && lesaoForm.controls.dataRecuperacao.value && lesaoForm.controls.dataRecuperacao.value < lesaoForm.controls.dataOcorrencia.value)">Data de recuperação não pode ser antes da ocorrência.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Tipo</label>
+            <select class="form-select" [class.is-invalid]="lesaoForm.controls.tipoLesao.invalid && lesaoForm.controls.tipoLesao.touched" formControlName="tipoLesao">
+              <option [ngValue]="null">-</option>
+              <option value="M">Muscular</option>
+              <option value="L">Ligamentar</option>
+              <option value="O">Óssea</option>
+              <option value="C">Contusão</option>
+              <option value="N">Neurológica</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Local</label>
+            <select class="form-select" [class.is-invalid]="lesaoForm.controls.localCorpo.invalid && lesaoForm.controls.localCorpo.touched" formControlName="localCorpo">
+              <option [ngValue]="null">-</option>
+              <option value="JL">Joelho</option>
+              <option value="TB">Tíbia</option>
+              <option value="CM">Coxa/Posterior</option>
+              <option value="OM">Ombro</option>
+              <option value="CT">Costas</option>
+              <option value="OT">Outro</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Observações</label>
+            <textarea rows="2" class="form-control" formControlName="observacoes"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeLesaoModal()">Cancelar</button>
+        <button type="button" class="btn btn-success" [disabled]="lesaoForm.invalid" (click)="confirmAddLesao()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Modal Vídeo -->
+@if (showVideoModal) {
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35)" (click)="closeVideoModal()" (keydown.escape)="closeVideoModal()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Adicionar Vídeo</h6>
+        <button type="button" class="btn-close" (click)="closeVideoModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="videoForm" class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Arquivo/URL</label>
+            <input class="form-control mb-2" [class.is-invalid]="videoForm.controls.caminhoVideo.invalid && videoForm.controls.caminhoVideo.touched" formControlName="caminhoVideo" placeholder="Ex.: https://... ou /uploads/videos/..." />
+            <input type="file" class="form-control" (change)="uploadVideoFile($event)" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Data</label>
+            <input type="date" class="form-control" [class.is-invalid]="videoForm.controls.dataEnvio.invalid && videoForm.controls.dataEnvio.touched" formControlName="dataEnvio" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Marcações</label>
+            <input class="form-control" [class.is-invalid]="videoForm.controls.marcacoes.invalid && videoForm.controls.marcacoes.touched" formControlName="marcacoes" placeholder="Ex.: #gol #assistencia" />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeVideoModal()">Cancelar</button>
+        <button type="button" class="btn btn-success" (click)="confirmAddVideo()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+}
+

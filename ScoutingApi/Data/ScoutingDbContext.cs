@@ -50,7 +50,7 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
             e.Property(x => x.Nacionalidade).HasColumnName("nacionalidade").HasMaxLength(50);
             e.Property(x => x.Posicao).HasColumnName("posicao").HasMaxLength(50);
             e.Property(x => x.Altura).HasColumnName("altura").HasPrecision(4,2);
-            e.Property(x => x.Peso).HasColumnName("peso").HasPrecision(5,2);
+            e.Property(x => x.Peso).HasColumnName("peso").HasPrecision(6,2);
             e.Property(x => x.PeDominante).HasColumnName("pe_dominante").HasMaxLength(10);
             e.Property(x => x.Foto).HasColumnName("foto");
             e.Property(x => x.Observacoes).HasColumnName("observacoes").HasMaxLength(255);

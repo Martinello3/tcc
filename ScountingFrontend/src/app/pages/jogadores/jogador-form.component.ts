@@ -1,18 +1,26 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { JogadoresService } from '../../services/jogadores.service';
 import { ClubesService } from '../../services/clubes.service';
 import type { Jogador, JogadorUpsert } from '../../models/player';
 import type { Clube } from '../../models/club';
+import type { Lesao, LesaoUpsert } from '../../models/lesao';
+import type { Video, VideoUpsert } from '../../models/video';
+import { LesoesService } from '../../services/lesoes.service';
+import { VideosService } from '../../services/videos.service';
 import { ToastService } from '../../services/toast.service';
+import { forkJoin, of } from 'rxjs';
+import { LoadingOverlayComponent } from '../../shared/loading-overlay.component';
 
 @Component({
   selector: 'app-jogador-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
-  template: `
+  imports: [CommonModule, ReactiveFormsModule, LoadingOverlayComponent],
+  templateUrl: './jogador-form.component.html',
+  // template moved to HTML file
+  /*
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h5 class="mb-0">{{ id ? 'Editar jogador' : 'Novo jogador' }}</h5>
   <div>
@@ -24,7 +32,17 @@ import { ToastService } from '../../services/toast.service';
   </div>
 </div>
 
-<div class="card shadow-sm">
+<nav class="mb-3">
+  <ul class="nav nav-tabs">
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="activeTab==='dados'" (click)="activeTab='dados'">Dados</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="activeTab==='lesoes'" (click)="activeTab='lesoes'">Lesões</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="activeTab==='videos'" (click)="activeTab='videos'">Vídeos</button></li>
+  </ul>
+</nav>
+  </div>
+</div>
+
+<div class="card shadow-sm" *ngIf="activeTab==='dados'">
   <div class="card-body">
     <form [formGroup]="form" class="row g-3">
       <div class="col-md-6">
@@ -54,11 +72,11 @@ import { ToastService } from '../../services/toast.service';
       </div>
       <div class="col-md-3">
         <label class="form-label">Altura (m)</label>
-        <input type="number" step="0.01" class="form-control" formControlName="altura" />
+        <input type="number" step="0.01" min="1" max="3" class="form-control" formControlName="altura" />
       </div>
       <div class="col-md-3">
         <label class="form-label">Peso (kg)</label>
-        <input type="number" step="0.01" class="form-control" formControlName="peso" />
+        <input type="number" step="0.1" min="30" max="200" class="form-control" formControlName="peso" />
       </div>
       <div class="col-md-3">
         <label class="form-label">Pé dominante</label>
@@ -86,15 +104,326 @@ import { ToastService } from '../../services/toast.service';
       </div>
     </form>
   </div>
+
+<div class="card shadow-sm mt-3" *ngIf="id">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Lesões do jogador</strong>
+    <a class="btn btn-sm btn-success" [routerLink]="['/lesoes','novo']" [queryParams]="{ jogadorId: id }">Adicionar</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Local</th>
+            <th>Ocorrência</th>
+            <th>Recuperação</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of lesoes; track l.id) {
+            <tr>
+              <td><span class="badge rounded-pill text-bg-secondary">{{ mapTipo(l.tipoLesao) }}</span></td>
+              <td><span class="badge rounded-pill text-bg-info">{{ mapLocal(l.localCorpo) }}</span></td>
+
+<div class="card shadow-sm" *ngIf="activeTab==='lesoes'">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Lesões do jogador</strong>
+    <button class="btn btn-sm btn-success" (click)="openLesaoModal()">Adicionar</button>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Local</th>
+            <th>Ocorrência</th>
+            <th>Recuperação</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of lesoes; track l.id) {
+            <tr>
+              <td><span class="badge rounded-pill text-bg-secondary">{{ mapTipo(l.tipoLesao) }}</span></td>
+              <td><span class="badge rounded-pill text-bg-info">{{ mapLocal(l.localCorpo) }}</span></td>
+              <td>{{ l.dataOcorrencia | date:'dd/MM/yyyy' }}</td>
+              <td>{{ l.dataRecuperacao ? (l.dataRecuperacao | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ l.descricao }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
-  `
+
+<div class="card shadow-sm mt-3" *ngIf="activeTab==='videos'">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Vídeos do jogador</strong>
+    <button class="btn btn-sm btn-success" (click)="openVideoModal()">Adicionar</button>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Data</th>
+  // Modais e formulários inline
+  showLesaoModal = false;
+  showVideoModal = false;
+
+  lesaoForm = this.fb.group({
+    descricao: this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    dataOcorrencia: this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    dataRecuperacao: this.fb.control<string | null>(null),
+    tipoLesao: this.fb.control<string | null>(null),
+    localCorpo: this.fb.control<string | null>(null),
+    observacoes: this.fb.control<string | null>(null),
+  });
+
+  videoForm = this.fb.group({
+    caminhoVideo: this.fb.control<string | null>(null),
+    dataEnvio: this.fb.control<string | null>(null),
+    marcacoes: this.fb.control<string | null>(null),
+  });
+
+  stagedLesoes: LesaoUpsert[] = [];
+  stagedVideos: VideoUpsert[] = [];
+
+  openLesaoModal() { this.lesaoForm.reset({ descricao: '', dataOcorrencia: '' }); this.showLesaoModal = true; }
+  openVideoModal() { this.videoForm.reset(); this.showVideoModal = true; }
+  closeLesaoModal() { this.showLesaoModal = false; }
+  closeVideoModal() { this.showVideoModal = false; }
+
+  async uploadVideoFile(evt: Event) {
+    const input = evt.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const resp = await fetch('/api/Videos/upload', { method: 'POST', body: form });
+      if (!resp.ok) throw new Error('Falha no upload');
+      const data = await resp.json();
+      const path = data.path as string;
+      this.videoForm.get('caminhoVideo')?.setValue(path);
+      this.toast.success('Upload concluído');
+    } catch {
+      this.toast.error('Não foi possível enviar o arquivo');
+    }
+  }
+
+  confirmAddLesao() {
+    if (this.lesaoForm.invalid) return;
+    const raw = this.lesaoForm.getRawValue();
+    // validação simples de datas
+    if (raw.dataRecuperacao && raw.dataRecuperacao < raw.dataOcorrencia) {
+      this.toast.error('Data de recuperação não pode ser antes da ocorrência');
+      return;
+    }
+    if (this.id) {
+      const payload: LesaoUpsert = { jogadorId: this.id, descricao: raw.descricao!, dataOcorrencia: raw.dataOcorrencia!, dataRecuperacao: raw.dataRecuperacao ?? null, tipoLesao: raw.tipoLesao ?? null, localCorpo: raw.localCorpo ?? null, observacoes: raw.observacoes ?? null };
+      this.lesoesSvc.create(payload).subscribe({ next: (created) => {
+        this.lesoes = [created, ...this.lesoes];
+        this.toast.success('Lesão adicionada');
+        this.closeLesaoModal();
+      }, error: () => this.toast.error('Falha ao adicionar lesão') });
+    } else {
+      const staged: LesaoUpsert = { jogadorId: 0 as any, descricao: raw.descricao!, dataOcorrencia: raw.dataOcorrencia!, dataRecuperacao: raw.dataRecuperacao ?? null, tipoLesao: raw.tipoLesao ?? null, localCorpo: raw.localCorpo ?? null, observacoes: raw.observacoes ?? null };
+      this.stagedLesoes = [staged, ...this.stagedLesoes];
+      this.toast.success('Lesão adicionada (será salva ao salvar o jogador)');
+      this.closeLesaoModal();
+    }
+  }
+
+  confirmAddVideo() {
+    const raw = this.videoForm.getRawValue();
+    const dataISO = raw.dataEnvio ? new Date(raw.dataEnvio as string).toISOString() : null;
+    if (this.id) {
+      const payload: VideoUpsert = { jogadorId: this.id, caminhoVideo: raw.caminhoVideo ?? null, dataEnvio: dataISO, marcacoes: raw.marcacoes ?? null };
+      this.videosSvc.create(payload).subscribe({ next: (created) => {
+        this.videos = [created, ...this.videos];
+        this.toast.success('Vídeo adicionado');
+        this.closeVideoModal();
+      }, error: () => this.toast.error('Falha ao adicionar vídeo') });
+    } else {
+      const staged: VideoUpsert = { jogadorId: 0 as any, caminhoVideo: raw.caminhoVideo ?? null, dataEnvio: dataISO, marcacoes: raw.marcacoes ?? null };
+      this.stagedVideos = [staged, ...this.stagedVideos];
+      this.toast.success('Vídeo adicionado (será salvo ao salvar o jogador)');
+      this.closeVideoModal();
+    }
+  }
+
+            <th>Arquivo/URL</th>
+            <th>Marcações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of videos; track v.id) {
+            <tr>
+              <td>{{ v.dataEnvio ? (v.dataEnvio | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ v.caminhoVideo || '-' }}</td>
+              <td>{{ v.marcacoes || '-' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+              <td>{{ l.dataOcorrencia | date:'dd/MM/yyyy' }}</td>
+              <td>{{ l.dataRecuperacao ? (l.dataRecuperacao | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ l.descricao }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-3" *ngIf="id">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Vídeos do jogador</strong>
+    <a class="btn btn-sm btn-success" [routerLink]="['/videos','novo']" [queryParams]="{ jogadorId: id }">Adicionar</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Arquivo/URL</th>
+            <th>Marcações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of videos; track v.id) {
+            <tr>
+              <td>{{ v.dataEnvio ? (v.dataEnvio | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ v.caminhoVideo || '-' }}</td>
+              <td>{{ v.marcacoes || '-' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
+  */
 })
 export class JogadorFormComponent implements OnInit {
   private fb = inject(FormBuilder);
+
+  private lesoesSvc = inject(LesoesService);
+  private videosSvc = inject(VideosService);
+
+  mapTipo(t?: string | null) { const M: any = { M:'Muscular', L:'Ligamentar', O:'Óssea', C:'Contusão', N:'Neurológica' }; return t ? (M[t] ?? t) : '-'; }
+  mapLocal(l?: string | null) { const M: any = { JL:'Joelho', TB:'Tíbia', CM:'Coxa/Posterior', OM:'Ombro', CT:'Costas', OT:'Outro' }; return l ? (M[l] ?? l) : '-'; }
+
   private svc = inject(JogadoresService);
   private clubesSvc = inject(ClubesService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  // Abas e modais
+  activeTab: 'dados' | 'lesoes' | 'videos' = 'dados';
+  showLesaoModal = false;
+  showVideoModal = false;
+
+  // Forms das modais
+  lesaoForm = this.fb.group({
+    descricao: this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    dataOcorrencia: this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    dataRecuperacao: this.fb.control<string | null>(null),
+    tipoLesao: this.fb.control<string | null>(null),
+    localCorpo: this.fb.control<string | null>(null),
+    observacoes: this.fb.control<string | null>(null),
+  });
+
+  videoForm = this.fb.group({
+    caminhoVideo: this.fb.control<string | null>(null),
+    dataEnvio: this.fb.control<string | null>(null),
+    marcacoes: this.fb.control<string | null>(null),
+  });
+
+  // Listas e staging
+  lesoes: Lesao[] = [];
+  videos: Video[] = [];
+  stagedLesoes: LesaoUpsert[] = [];
+  stagedVideos: VideoUpsert[] = [];
+
+  openLesaoModal() { this.lesaoForm.reset({ descricao: '', dataOcorrencia: '' }); this.showLesaoModal = true; }
+  openVideoModal() { this.videoForm.reset(); this.showVideoModal = true; }
+  closeLesaoModal() { this.showLesaoModal = false; }
+  closeVideoModal() { this.showVideoModal = false; }
+
+  trackId(i: number, it: any) { return it?.id ?? i; }
+
+  async uploadVideoFile(evt: Event) {
+    const input = evt.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const resp = await fetch('/api/Videos/upload', { method: 'POST', body: form });
+      if (!resp.ok) throw new Error('Falha no upload');
+      const data = await resp.json();
+      const path = data.path as string;
+      this.videoForm.get('caminhoVideo')?.setValue(path);
+      this.toast.success('Upload concluído');
+    } catch {
+      this.toast.error('Não foi possível enviar o arquivo');
+    }
+  }
+
+  confirmAddLesao() {
+    if (this.lesaoForm.invalid) return;
+    const raw = this.lesaoForm.getRawValue();
+    if (raw.dataRecuperacao && raw.dataRecuperacao < raw.dataOcorrencia) {
+      this.toast.error('Data de recuperação não pode ser antes da ocorrência');
+      return;
+    }
+    const staged: LesaoUpsert = {
+      jogadorId: (this.id ?? 0) as any,
+      descricao: raw.descricao!,
+      dataOcorrencia: raw.dataOcorrencia!,
+      dataRecuperacao: raw.dataRecuperacao ?? null,
+      tipoLesao: raw.tipoLesao ?? null,
+      localCorpo: raw.localCorpo ?? null,
+      observacoes: raw.observacoes ?? null
+    };
+    this.stagedLesoes = [staged, ...this.stagedLesoes];
+    this.toast.success('Lesão adicionada (será salva ao clicar em Salvar)');
+    this.closeLesaoModal();
+  }
+
+  confirmAddVideo() {
+    const raw = this.videoForm.getRawValue();
+    const dataISO = raw.dataEnvio ? new Date(raw.dataEnvio as string).toISOString() : null;
+    const staged: VideoUpsert = {
+      jogadorId: (this.id ?? 0) as any,
+      caminhoVideo: raw.caminhoVideo ?? null,
+      dataEnvio: dataISO,
+      marcacoes: raw.marcacoes ?? null
+    };
+    this.stagedVideos = [staged, ...this.stagedVideos];
+    this.toast.success('Vídeo adicionado (será salvo ao clicar em Salvar)');
+    this.closeVideoModal();
+  }
+
+  goBack() { this.router.navigate(['/jogadores']); }
+
+  removeStagedLesao(i: number) { this.stagedLesoes = this.stagedLesoes.filter((_, idx) => idx !== i); }
+  removeStagedVideo(i: number) { this.stagedVideos = this.stagedVideos.filter((_, idx) => idx !== i); }
+
   private toast = inject(ToastService);
 
   id: number | null = null;
@@ -116,8 +445,8 @@ export class JogadorFormComponent implements OnInit {
     dataNascimento: this.fb.nonNullable.control('', { validators: [Validators.required, this.idadeValidator(13, 20)] }),
     nacionalidade: this.fb.control<string | null>(null),
     posicao: this.fb.control<string | null>(null),
-    altura: this.fb.control<number | null>(null),
-    peso: this.fb.control<number | null>(null),
+    altura: this.fb.control<number | null>(null, { validators: [Validators.min(1), Validators.max(3)] }),
+    peso: this.fb.control<number | null>(null, { validators: [Validators.min(30), Validators.max(200)] }),
     peDominante: this.fb.control<string | null>(null),
     clubeAtualId: this.fb.control<number | null>(null),
     foto: this.fb.control<string | null>(null),
@@ -131,7 +460,12 @@ export class JogadorFormComponent implements OnInit {
     this.clubesSvc.list().subscribe({ next: (res) => (this.clubes = res) });
 
     if (this.id) {
-      this.svc.get(this.id).subscribe({ next: (j: Jogador) => this.form.patchValue(j as any) });
+      this.svc.get(this.id).subscribe({ next: (j: Jogador) => {
+        this.form.patchValue(j as any);
+        // Carregar lesões e vídeos relacionados
+        this.lesoesSvc.byJogador(this.id!).subscribe({ next: (ls) => this.lesoes = ls });
+        this.videosSvc.byJogador(this.id!).subscribe({ next: (vs) => this.videos = vs });
+      }});
     }
 
     // Atualiza validação ao mudar a data
@@ -156,15 +490,33 @@ export class JogadorFormComponent implements OnInit {
       foto: raw.foto ?? null,
       observacoes: raw.observacoes ?? null,
     };
+    const persistAll = (jogadorId: number) => {
+      const toCreateLesoes = this.stagedLesoes.map(s => ({ ...s, jogadorId }));
+      const toCreateVideos = this.stagedVideos.map(s => ({ ...s, jogadorId }));
+      const lesoes$ = toCreateLesoes.length ? forkJoin(toCreateLesoes.map(x => this.lesoesSvc.create(x))) : of([]);
+      const videos$ = toCreateVideos.length ? forkJoin(toCreateVideos.map(x => this.videosSvc.create(x))) : of([]);
+      forkJoin([lesoes$, videos$]).subscribe({ next: ([ls, vs]: any) => {
+        const qtLes = Array.isArray(ls) ? ls.length : 0;
+        const qtVid = Array.isArray(vs) ? vs.length : 0;
+        // limpar staging após persistir
+        this.stagedLesoes = [];
+        this.stagedVideos = [];
+        this.toast.success(`Jogador salvo. Lesões salvas: ${qtLes}. Vídeos salvos: ${qtVid}.`);
+        this.router.navigate(['/jogadores']);
+      }, error: () => {
+        this.toast.error('Jogador salvo, mas houve falha ao salvar lesões/vídeos');
+        this.router.navigate(['/jogadores']);
+      }});
+    };
+
     if (this.id) {
       this.svc.update(this.id, payload).subscribe({ next: () => {
-        this.toast.success('Jogador atualizado');
-        this.router.navigate(['/jogadores']);
+        persistAll(this.id!);
       }, error: () => this.toast.error('Falha ao atualizar jogador'), complete: () => { this.saving = false; } });
     } else {
-      this.svc.create(payload).subscribe({ next: () => {
-        this.toast.success('Jogador criado');
-        this.router.navigate(['/jogadores']);
+      this.svc.create(payload).subscribe({ next: (created) => {
+        this.id = (created as any).id;
+        persistAll(this.id!);
       }, error: () => this.toast.error('Falha ao criar jogador'), complete: () => { this.saving = false; } });
     }
   }

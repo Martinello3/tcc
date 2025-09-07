@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
+
 namespace ScoutingApi.Models;
 
 public class Usuario
@@ -30,6 +33,7 @@ public class Jogador
     public decimal? Peso { get; set; }
     public string? PeDominante { get; set; }
     public int? ClubeAtualId { get; set; }
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public Clube? ClubeAtual { get; set; }
     public string? Foto { get; set; }
     public string? Observacoes { get; set; }
@@ -45,6 +49,7 @@ public class HistoricoClube
 {
     public int Id { get; set; }
     public int JogadorId { get; set; }
+    [JsonIgnore, Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public Jogador Jogador { get; set; } = default!;
     public int ClubeId { get; set; }
     public Clube Clube { get; set; } = default!;
@@ -57,6 +62,7 @@ public class Avaliacao
 {
     public int Id { get; set; }
     public int JogadorId { get; set; }
+    [JsonIgnore, Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public Jogador Jogador { get; set; } = default!;
     public int AvaliadorId { get; set; }
     public Usuario Avaliador { get; set; } = default!;
@@ -87,6 +93,7 @@ public class Video
 {
     public int Id { get; set; }
     public int JogadorId { get; set; }
+    [JsonIgnore, Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public Jogador Jogador { get; set; } = default!;
     public string? CaminhoVideo { get; set; }
     public DateTime? DataEnvio { get; set; }
@@ -97,6 +104,7 @@ public class Relatorio
 {
     public int Id { get; set; }
     public int JogadorId { get; set; }
+    [JsonIgnore, Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public Jogador Jogador { get; set; } = default!;
     public int AvaliacaoId { get; set; }
     public Avaliacao Avaliacao { get; set; } = default!;
@@ -108,6 +116,7 @@ public class Lesao
 {
     public int Id { get; set; }
     public int JogadorId { get; set; }
+    [JsonIgnore, Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public Jogador Jogador { get; set; } = default!;
     public string Descricao { get; set; } = default!;
     public DateOnly DataOcorrencia { get; set; }
