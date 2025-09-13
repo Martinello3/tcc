@@ -9,7 +9,7 @@ namespace ScoutingApi.Controllers;
 
 public class VideosController : CrudBase<ScoutingDbContext, Video>
 {
-    private readonly ScoutingDbContext _db;
+    private new readonly ScoutingDbContext _db;
     public VideosController(ScoutingDbContext db) : base(db) { _db = db; }
     [HttpPost]
     public override async Task<ActionResult<Video>> Create(Video entity)

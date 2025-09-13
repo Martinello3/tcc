@@ -10,6 +10,9 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
     public DbSet<Jogador> Jogadores => Set<Jogador>();
     public DbSet<HistoricoClube> HistoricoClubes => Set<HistoricoClube>();
     public DbSet<Avaliacao> Avaliacoes => Set<Avaliacao>();
+    public DbSet<AvaliacaoFisica> AvaliacoesFisicas => Set<AvaliacaoFisica>();
+    public DbSet<AvaliacaoTecnicaQuantitativa> AvaliacoesTecnicasQuantitativas => Set<AvaliacaoTecnicaQuantitativa>();
+    public DbSet<AvaliacaoTaticaComportamental> AvaliacoesTaticasComportamentais => Set<AvaliacaoTaticaComportamental>();
     public DbSet<Video> Videos => Set<Video>();
     public DbSet<Relatorio> Relatorios => Set<Relatorio>();
     public DbSet<Lesao> Lesoes => Set<Lesao>();
@@ -17,6 +20,8 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+#pragma warning disable CS0618
 
         modelBuilder.Entity<Usuario>(e =>
         {
@@ -36,9 +41,11 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
             e.ToTable("clubes");
             e.HasKey(x => x.Id);
             e.Property(x => x.Nome).HasColumnName("nome").HasMaxLength(100).IsRequired();
+            e.HasIndex(x => x.Nome).IsUnique();
             e.Property(x => x.Cidade).HasColumnName("cidade").HasMaxLength(100);
             e.Property(x => x.Estado).HasColumnName("estado").HasMaxLength(50);
             e.Property(x => x.Pais).HasColumnName("pais").HasMaxLength(50);
+            e.Property(x => x.Foto).HasColumnName("foto").HasMaxLength(255);
         });
 
         modelBuilder.Entity<Jogador>(e =>
@@ -80,38 +87,86 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
         {
             e.ToTable("avaliacoes");
             e.HasKey(x => x.Id);
-            e.Property(x => x.JogadorId).HasColumnName("jogador_id");
-            e.Property(x => x.AvaliadorId).HasColumnName("avaliador_id");
-            e.Property(x => x.Data).HasColumnName("data").IsRequired();
 
-            e.Property(x => x.ControleBola).HasColumnName("controle_bola");
-            e.Property(x => x.Passe).HasColumnName("passe");
-            e.Property(x => x.Finalizacao).HasColumnName("finalizacao");
-            e.Property(x => x.Drible).HasColumnName("drible");
+            e.Property(x => x.JogadorId).HasColumnName("jogador_id").IsRequired();
+            e.Property(x => x.AvaliadorId).HasColumnName("usuario_id").IsRequired();
+            e.Property(x => x.Data).HasColumnName("data_avaliacao").IsRequired();
 
-            e.Property(x => x.Posicionamento).HasColumnName("posicionamento");
-            e.Property(x => x.LeituraJogo).HasColumnName("leitura_jogo");
-            e.Property(x => x.TomadaDecisao).HasColumnName("tomada_decisao");
+            e.Property(x => x.LocalAvaliacao).HasColumnName("local_avaliacao").HasMaxLength(255);
+            e.Property(x => x.Comentarios).HasColumnName("comentarios_gerais");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
-            e.Property(x => x.Velocidade).HasColumnName("velocidade");
-            e.Property(x => x.Resistencia).HasColumnName("resistencia");
-            e.Property(x => x.Forca).HasColumnName("forca");
-
-            e.Property(x => x.Disciplina).HasColumnName("disciplina");
-            e.Property(x => x.Lideranca).HasColumnName("lideranca");
-            e.Property(x => x.Proatividade).HasColumnName("proatividade");
-            e.Property(x => x.InteligenciaEmocional).HasColumnName("inteligencia_emocional");
-
-            e.Property(x => x.Comentarios).HasColumnName("comentarios").HasMaxLength(255);
-
-            e.HasCheckConstraint("CK_avaliacoes_score_tec", "controle_bola BETWEEN 0 AND 10 AND passe BETWEEN 0 AND 10 AND finalizacao BETWEEN 0 AND 10 AND drible BETWEEN 0 AND 10");
-            e.HasCheckConstraint("CK_avaliacoes_score_tat", "posicionamento BETWEEN 0 AND 10 AND leitura_jogo BETWEEN 0 AND 10 AND tomada_decisao BETWEEN 0 AND 10");
-            e.HasCheckConstraint("CK_avaliacoes_score_fis", "velocidade BETWEEN 0 AND 10 AND resistencia BETWEEN 0 AND 10 AND forca BETWEEN 0 AND 10");
-            e.HasCheckConstraint("CK_avaliacoes_score_psc", "disciplina BETWEEN 0 AND 10 AND lideranca BETWEEN 0 AND 10 AND proatividade BETWEEN 0 AND 10 AND inteligencia_emocional BETWEEN 0 AND 10");
+            // Nota final agregada (0-10)
+            e.Property(x => x.NotaFinal).HasColumnName("nota_final").HasPrecision(4, 2);
 
             e.HasOne(x => x.Jogador).WithMany(x => x.Avaliacoes).HasForeignKey(x => x.JogadorId);
             e.HasOne(x => x.Avaliador).WithMany().HasForeignKey(x => x.AvaliadorId);
         });
+
+        modelBuilder.Entity<AvaliacaoFisica>(e =>
+        {
+            e.ToTable("avaliacao_fisica");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AvaliacaoId).HasColumnName("avaliacao_id").IsRequired();
+            e.Property(x => x.Teste).HasColumnName("teste").HasMaxLength(100).IsRequired();
+            e.Property(x => x.TipoTeste).HasColumnName("tipo_teste").HasMaxLength(50).IsRequired();
+            e.Property(x => x.Resultado).HasColumnName("resultado").HasMaxLength(50).IsRequired();
+            e.Property(x => x.Unidade).HasColumnName("unidade").HasMaxLength(50).IsRequired();
+            e.HasOne(x => x.Avaliacao)
+                .WithMany(a => a.Fisicas)
+                .HasForeignKey(x => x.AvaliacaoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AvaliacaoTecnicaQuantitativa>(e =>
+        {
+            e.ToTable("avaliacao_tecnica_quantitativa");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AvaliacaoId).HasColumnName("avaliacao_id").IsRequired();
+            e.Property(x => x.TipoExercicio).HasColumnName("tipo_exercicio").HasMaxLength(100).IsRequired();
+            e.Property(x => x.Exercicio).HasColumnName("exercicio").HasMaxLength(255).IsRequired();
+            e.Property(x => x.Acertos).HasColumnName("acertos").IsRequired();
+            e.Property(x => x.Tentativas).HasColumnName("tentativas").IsRequired();
+            e.Property(x => x.Observacoes).HasColumnName("observacoes");
+            e.HasOne(x => x.Avaliacao)
+                .WithMany(a => a.TecnicasQuantitativas)
+                .HasForeignKey(x => x.AvaliacaoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AvaliacaoTecnicaQuantitativa>(e =>
+        {
+            e.ToTable("avaliacao_tecnica_quantitativa");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AvaliacaoId).HasColumnName("avaliacao_id").IsRequired();
+            e.Property(x => x.Exercicio).HasColumnName("exercicio").HasMaxLength(255).IsRequired();
+            e.Property(x => x.Acertos).HasColumnName("acertos").IsRequired();
+            e.Property(x => x.Tentativas).HasColumnName("tentativas").IsRequired();
+            e.Property(x => x.Observacoes).HasColumnName("observacoes");
+            e.HasOne(x => x.Avaliacao)
+                .WithMany(a => a.TecnicasQuantitativas)
+                .HasForeignKey(x => x.AvaliacaoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AvaliacaoTaticaComportamental>(e =>
+        {
+            e.ToTable("avaliacao_tatica_comportamental");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AvaliacaoId).HasColumnName("avaliacao_id").IsRequired();
+            e.Property(x => x.Posicionamento).HasColumnName("posicionamento");
+            e.Property(x => x.LeituraJogo).HasColumnName("leitura_jogo");
+            e.Property(x => x.TomadaDecisao).HasColumnName("tomada_decisao");
+            e.Property(x => x.DisciplinaTatica).HasColumnName("disciplina_tatica");
+            e.Property(x => x.Competitividade).HasColumnName("competitividade");
+            e.Property(x => x.InteligenciaEmocional).HasColumnName("inteligencia_emocional");
+            e.HasOne(x => x.Avaliacao)
+                .WithOne(a => a.TaticaComportamental)
+                .HasForeignKey<AvaliacaoTaticaComportamental>(x => x.AvaliacaoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
 
         modelBuilder.Entity<Video>(e =>
         {
@@ -156,5 +211,7 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
             e.HasOne(x => x.Jogador).WithMany(x => x.Lesoes).HasForeignKey(x => x.JogadorId);
         });
     }
+#pragma warning restore CS0618
+
 }
 

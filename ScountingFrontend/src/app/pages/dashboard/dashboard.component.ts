@@ -6,7 +6,15 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-<div class="p-3">
+<div class="container py-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="m-0"><i class="bi bi-speedometer2 text-success"></i> Dashboard</h3>
+      <small class="text-muted">Visão geral do sistema</small>
+    </div>
+    <div class="page-header-actions"><!-- ações futuras --></div>
+  </div>
+
   <div class="row g-3">
     <div class="col-md-4">
       <div class="card shadow-sm h-100">

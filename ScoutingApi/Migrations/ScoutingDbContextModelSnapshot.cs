@@ -24,84 +24,47 @@ namespace ScoutingApi.Migrations
 
             modelBuilder.Entity("ScoutingApi.Models.Avaliacao", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("bigint");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<int>("AvaliadorId")
                         .HasColumnType("integer")
-                        .HasColumnName("avaliador_id");
+                        .HasColumnName("usuario_id");
 
                     b.Property<string>("Comentarios")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("comentarios");
+                        .HasColumnType("text")
+                        .HasColumnName("comentarios_gerais");
 
-                    b.Property<int?>("ControleBola")
-                        .HasColumnType("integer")
-                        .HasColumnName("controle_bola");
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
 
-                    b.Property<DateOnly>("Data")
-                        .HasColumnType("date")
-                        .HasColumnName("data");
-
-                    b.Property<int?>("Disciplina")
-                        .HasColumnType("integer")
-                        .HasColumnName("disciplina");
-
-                    b.Property<int?>("Drible")
-                        .HasColumnType("integer")
-                        .HasColumnName("drible");
-
-                    b.Property<int?>("Finalizacao")
-                        .HasColumnType("integer")
-                        .HasColumnName("finalizacao");
-
-                    b.Property<int?>("Forca")
-                        .HasColumnType("integer")
-                        .HasColumnName("forca");
-
-                    b.Property<int?>("InteligenciaEmocional")
-                        .HasColumnType("integer")
-                        .HasColumnName("inteligencia_emocional");
+                    b.Property<DateTimeOffset>("Data")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("data_avaliacao");
 
                     b.Property<int>("JogadorId")
                         .HasColumnType("integer")
                         .HasColumnName("jogador_id");
 
-                    b.Property<int?>("LeituraJogo")
-                        .HasColumnType("integer")
-                        .HasColumnName("leitura_jogo");
+                    b.Property<string>("LocalAvaliacao")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("local_avaliacao");
 
-                    b.Property<int?>("Lideranca")
-                        .HasColumnType("integer")
-                        .HasColumnName("lideranca");
+                    b.Property<decimal?>("NotaFinal")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("numeric(4,2)")
+                        .HasColumnName("nota_final");
 
-                    b.Property<int?>("Passe")
-                        .HasColumnType("integer")
-                        .HasColumnName("passe");
-
-                    b.Property<int?>("Posicionamento")
-                        .HasColumnType("integer")
-                        .HasColumnName("posicionamento");
-
-                    b.Property<int?>("Proatividade")
-                        .HasColumnType("integer")
-                        .HasColumnName("proatividade");
-
-                    b.Property<int?>("Resistencia")
-                        .HasColumnType("integer")
-                        .HasColumnName("resistencia");
-
-                    b.Property<int?>("TomadaDecisao")
-                        .HasColumnType("integer")
-                        .HasColumnName("tomada_decisao");
-
-                    b.Property<int?>("Velocidade")
-                        .HasColumnType("integer")
-                        .HasColumnName("velocidade");
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
@@ -109,16 +72,137 @@ namespace ScoutingApi.Migrations
 
                     b.HasIndex("JogadorId");
 
-                    b.ToTable("avaliacoes", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_avaliacoes_score_fis", "velocidade BETWEEN 0 AND 10 AND resistencia BETWEEN 0 AND 10 AND forca BETWEEN 0 AND 10");
+                    b.ToTable("avaliacoes", (string)null);
+                });
 
-                            t.HasCheckConstraint("CK_avaliacoes_score_psc", "disciplina BETWEEN 0 AND 10 AND lideranca BETWEEN 0 AND 10 AND proatividade BETWEEN 0 AND 10 AND inteligencia_emocional BETWEEN 0 AND 10");
+            modelBuilder.Entity("ScoutingApi.Models.AvaliacaoFisica", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
 
-                            t.HasCheckConstraint("CK_avaliacoes_score_tat", "posicionamento BETWEEN 0 AND 10 AND leitura_jogo BETWEEN 0 AND 10 AND tomada_decisao BETWEEN 0 AND 10");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                            t.HasCheckConstraint("CK_avaliacoes_score_tec", "controle_bola BETWEEN 0 AND 10 AND passe BETWEEN 0 AND 10 AND finalizacao BETWEEN 0 AND 10 AND drible BETWEEN 0 AND 10");
-                        });
+                    b.Property<long>("AvaliacaoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("avaliacao_id");
+
+                    b.Property<string>("Resultado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("resultado");
+
+                    b.Property<string>("Teste")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("teste");
+
+                    b.Property<string>("TipoTeste")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("tipo_teste");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("unidade");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AvaliacaoId");
+
+                    b.ToTable("avaliacao_fisica", (string)null);
+                });
+
+            modelBuilder.Entity("ScoutingApi.Models.AvaliacaoTaticaComportamental", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AvaliacaoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("avaliacao_id");
+
+                    b.Property<short?>("Competitividade")
+                        .HasColumnType("smallint")
+                        .HasColumnName("competitividade");
+
+                    b.Property<short?>("DisciplinaTatica")
+                        .HasColumnType("smallint")
+                        .HasColumnName("disciplina_tatica");
+
+                    b.Property<short?>("InteligenciaEmocional")
+                        .HasColumnType("smallint")
+                        .HasColumnName("inteligencia_emocional");
+
+                    b.Property<short?>("LeituraJogo")
+                        .HasColumnType("smallint")
+                        .HasColumnName("leitura_jogo");
+
+                    b.Property<short?>("Posicionamento")
+                        .HasColumnType("smallint")
+                        .HasColumnName("posicionamento");
+
+                    b.Property<short?>("TomadaDecisao")
+                        .HasColumnType("smallint")
+                        .HasColumnName("tomada_decisao");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AvaliacaoId")
+                        .IsUnique();
+
+                    b.ToTable("avaliacao_tatica_comportamental", (string)null);
+                });
+
+            modelBuilder.Entity("ScoutingApi.Models.AvaliacaoTecnicaQuantitativa", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Acertos")
+                        .HasColumnType("integer")
+                        .HasColumnName("acertos");
+
+                    b.Property<long>("AvaliacaoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("avaliacao_id");
+
+                    b.Property<string>("Exercicio")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("exercicio");
+
+                    b.Property<string>("Observacoes")
+                        .HasColumnType("text")
+                        .HasColumnName("observacoes");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("integer")
+                        .HasColumnName("tentativas");
+
+                    b.Property<string>("TipoExercicio")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tipo_exercicio");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AvaliacaoId");
+
+                    b.ToTable("avaliacao_tecnica_quantitativa", (string)null);
                 });
 
             modelBuilder.Entity("ScoutingApi.Models.Clube", b =>
@@ -139,6 +223,11 @@ namespace ScoutingApi.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("estado");
 
+                    b.Property<string>("Foto")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("foto");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -151,6 +240,9 @@ namespace ScoutingApi.Migrations
                         .HasColumnName("pais");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
 
                     b.ToTable("clubes", (string)null);
                 });
@@ -317,8 +409,8 @@ namespace ScoutingApi.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AvaliacaoId")
-                        .HasColumnType("integer")
+                    b.Property<long>("AvaliacaoId")
+                        .HasColumnType("bigint")
                         .HasColumnName("avaliacao_id");
 
                     b.Property<string>("CaminhoPdf")
@@ -446,6 +538,39 @@ namespace ScoutingApi.Migrations
                     b.Navigation("Jogador");
                 });
 
+            modelBuilder.Entity("ScoutingApi.Models.AvaliacaoFisica", b =>
+                {
+                    b.HasOne("ScoutingApi.Models.Avaliacao", "Avaliacao")
+                        .WithMany("Fisicas")
+                        .HasForeignKey("AvaliacaoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Avaliacao");
+                });
+
+            modelBuilder.Entity("ScoutingApi.Models.AvaliacaoTaticaComportamental", b =>
+                {
+                    b.HasOne("ScoutingApi.Models.Avaliacao", "Avaliacao")
+                        .WithOne("TaticaComportamental")
+                        .HasForeignKey("ScoutingApi.Models.AvaliacaoTaticaComportamental", "AvaliacaoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Avaliacao");
+                });
+
+            modelBuilder.Entity("ScoutingApi.Models.AvaliacaoTecnicaQuantitativa", b =>
+                {
+                    b.HasOne("ScoutingApi.Models.Avaliacao", "Avaliacao")
+                        .WithMany("TecnicasQuantitativas")
+                        .HasForeignKey("AvaliacaoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Avaliacao");
+                });
+
             modelBuilder.Entity("ScoutingApi.Models.HistoricoClube", b =>
                 {
                     b.HasOne("ScoutingApi.Models.Clube", "Clube")
@@ -514,6 +639,15 @@ namespace ScoutingApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Jogador");
+                });
+
+            modelBuilder.Entity("ScoutingApi.Models.Avaliacao", b =>
+                {
+                    b.Navigation("Fisicas");
+
+                    b.Navigation("TaticaComportamental");
+
+                    b.Navigation("TecnicasQuantitativas");
                 });
 
             modelBuilder.Entity("ScoutingApi.Models.Jogador", b =>

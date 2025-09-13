@@ -4,6 +4,7 @@ export interface Clube {
   cidade?: string | null;
   estado?: string | null;
   pais?: string | null;
+  foto?: string | null;
 }
 
 export interface ClubeUpsert {
@@ -11,5 +12,6 @@ export interface ClubeUpsert {
   cidade?: string | null;
   estado?: string | null;
   pais?: string | null;
+  foto?: string | null;
 }
 

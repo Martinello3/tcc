@@ -358,6 +358,9 @@ export class JogadorFormComponent implements OnInit {
   videos: Video[] = [];
   stagedLesoes: LesaoUpsert[] = [];
   stagedVideos: VideoUpsert[] = [];
+  // Preview imediato da foto selecionada
+  previewFoto: string | null = null;
+  private previewObjectUrl: string | null = null;
 
   openLesaoModal() { this.lesaoForm.reset({ descricao: '', dataOcorrencia: '' }); this.showLesaoModal = true; }
   openVideoModal() { this.videoForm.reset(); this.showVideoModal = true; }
@@ -383,6 +386,49 @@ export class JogadorFormComponent implements OnInit {
       this.toast.error('Não foi possível enviar o arquivo');
     }
   }
+
+  async uploadFotoFile(evt: Event) {
+    const input = evt.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    // Preview imediato
+    if (this.previewObjectUrl) { URL.revokeObjectURL(this.previewObjectUrl); }
+    this.previewObjectUrl = URL.createObjectURL(file);
+    this.previewFoto = this.previewObjectUrl;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await fetch('/api/Uploads/jogadores/foto', { method: 'POST', body: formData });
+      if (!resp.ok) throw new Error('Falha no upload');
+      const data = await resp.json();
+      const path = data.path as string;
+      this.form.get('foto')?.setValue(path);
+      // após upload concluído, usar o caminho final
+      this.previewFoto = path;
+      if (this.previewObjectUrl) { URL.revokeObjectURL(this.previewObjectUrl); this.previewObjectUrl = null; }
+      this.toast.success('Foto enviada');
+    } catch {
+      this.toast.error('Não foi possível enviar a foto');
+    }
+  }
+
+  clearFoto() {
+    this.form.get('foto')?.setValue(null);
+    this.previewFoto = null;
+    if (this.previewObjectUrl) { URL.revokeObjectURL(this.previewObjectUrl); this.previewObjectUrl = null; }
+  }
+
+  fotoSrc(val: string | null | undefined): string | null {
+    if (!val) return null;
+    if (val.startsWith('blob:') || val.startsWith('data:') || /^https?:\/\//.test(val)) return val;
+    const path = val.startsWith('/') ? val : '/' + val;
+    // Em dev (ng serve 4200), se proxy n e3o pegar, aponta direto para o backend
+    if (typeof window !== 'undefined' && window.location && window.location.port === '4200') {
+      return 'http://127.0.0.1:5180' + path;
+    }
+    return path;
+  }
+
 
   confirmAddLesao() {
     if (this.lesaoForm.invalid) return;
@@ -419,7 +465,7 @@ export class JogadorFormComponent implements OnInit {
     this.closeVideoModal();
   }
 
-  goBack() { this.router.navigate(['/jogadores']); }
+  goBack() { const id = this.id; this.router.navigate(id ? ['/jogadores', id, 'perfil'] : ['/jogadores']); }
 
   removeStagedLesao(i: number) { this.stagedLesoes = this.stagedLesoes.filter((_, idx) => idx !== i); }
   removeStagedVideo(i: number) { this.stagedVideos = this.stagedVideos.filter((_, idx) => idx !== i); }
@@ -445,8 +491,8 @@ export class JogadorFormComponent implements OnInit {
     dataNascimento: this.fb.nonNullable.control('', { validators: [Validators.required, this.idadeValidator(13, 20)] }),
     nacionalidade: this.fb.control<string | null>(null),
     posicao: this.fb.control<string | null>(null),
-    altura: this.fb.control<number | null>(null, { validators: [Validators.min(1), Validators.max(3)] }),
-    peso: this.fb.control<number | null>(null, { validators: [Validators.min(30), Validators.max(200)] }),
+    altura: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(1), Validators.max(3)] }),
+    peso: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(30), Validators.max(200)] }),
     peDominante: this.fb.control<string | null>(null),
     clubeAtualId: this.fb.control<number | null>(null),
     foto: this.fb.control<string | null>(null),
@@ -502,10 +548,10 @@ export class JogadorFormComponent implements OnInit {
         this.stagedLesoes = [];
         this.stagedVideos = [];
         this.toast.success(`Jogador salvo. Lesões salvas: ${qtLes}. Vídeos salvos: ${qtVid}.`);
-        this.router.navigate(['/jogadores']);
+        this.router.navigate(['/jogadores', jogadorId, 'perfil']);
       }, error: () => {
         this.toast.error('Jogador salvo, mas houve falha ao salvar lesões/vídeos');
-        this.router.navigate(['/jogadores']);
+        this.router.navigate(['/jogadores', jogadorId, 'perfil']);
       }});
     };
 

@@ -11,6 +11,36 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
 {
     private readonly ScoutingDbContext _db = db;
 
+    private static string? ToAbsolutePathIfLocal(string? maybeRelative)
+    {
+        if (string.IsNullOrWhiteSpace(maybeRelative)) return null;
+        var p = maybeRelative!.Trim();
+        if (p.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || p.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return null; // remote; don't touch
+        if (p.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            var rel = p.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", rel);
+        }
+        if (p.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            var rel = p.Replace('/', Path.DirectorySeparatorChar);
+            return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", rel);
+        }
+        // any other absolute path: ignore for safety
+        return null;
+    }
+    private static void TryDeleteLocalFile(string? oldPath)
+    {
+        try
+        {
+            var abs = ToAbsolutePathIfLocal(oldPath);
+            if (abs != null && System.IO.File.Exists(abs)) System.IO.File.Delete(abs);
+        }
+        catch { /* swallow to not break request */ }
+    }
+
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Jogador>>> GetAll()
     {
@@ -57,6 +87,8 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     public async Task<IActionResult> Update(int id, Jogador entity)
     {
         entity.Id = id;
+        var current = await _db.Jogadores.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id);
+        var oldFoto = current?.Foto;
         // Normaliza altura/peso como no Create
         if (entity.Altura.HasValue)
         {
@@ -74,6 +106,11 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
         }
         _db.Entry(entity).State = EntityState.Modified;
         await _db.SaveChangesAsync();
+        // Se a foto foi trocada ou removida, apaga a antiga do disco
+        if (!string.IsNullOrWhiteSpace(oldFoto) && !string.Equals(oldFoto, entity.Foto, StringComparison.OrdinalIgnoreCase))
+        {
+            TryDeleteLocalFile(oldFoto);
+        }
         return NoContent();
     }
 
@@ -82,8 +119,10 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     {
         var entity = await _db.Jogadores.FindAsync(id);
         if (entity is null) return NotFound();
+        var oldFoto = entity.Foto;
         _db.Remove(entity);
         await _db.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(oldFoto)) TryDeleteLocalFile(oldFoto);
         return NoContent();
     }
 }
