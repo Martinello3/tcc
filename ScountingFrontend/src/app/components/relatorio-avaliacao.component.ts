@@ -25,11 +25,13 @@ interface RelatorioData {
       nome: string;
     };
     fisica: Array<{
+      tipo_teste?: string;
       teste: string;
       resultado: string;
       unidade: string;
     }>;
     tecnica: Array<{
+      tipo_exercicio?: string;
       exercicio: string;
       acertos: number;
       tentativas: number;
@@ -421,6 +423,7 @@ interface RelatorioData {
               <table class="data-table">
                 <thead>
                   <tr>
+                    <th>Categoria</th>
                     <th>Teste</th>
                     <th>Resultado</th>
                     <th>Unidade</th>
@@ -429,6 +432,7 @@ interface RelatorioData {
                 <tbody>
                   @for (teste of data.avaliacao.fisica; track teste.teste) {
                     <tr>
+                      <td>{{ teste.tipo_teste || '-' }}</td>
                       <td>{{ teste.teste }}</td>
                       <td>{{ teste.resultado }}</td>
                       <td>{{ teste.unidade }}</td>
@@ -443,6 +447,7 @@ interface RelatorioData {
               <table class="data-table" style="margin-top: 16px;">
                 <thead>
                   <tr>
+                    <th>Categoria</th>
                     <th>Exercício</th>
                     <th>Precisão</th>
                     <th>Observações</th>
@@ -451,6 +456,7 @@ interface RelatorioData {
                 <tbody>
                   @for (exercicio of data.avaliacao.tecnica; track exercicio.exercicio) {
                     <tr>
+                      <td>{{ exercicio.tipo_exercicio || '-' }}</td>
                       <td>{{ exercicio.exercicio }}</td>
                       <td>
                         <span class="precision-badge">{{ calculatePrecision(exercicio.acertos, exercicio.tentativas) }}%</span>

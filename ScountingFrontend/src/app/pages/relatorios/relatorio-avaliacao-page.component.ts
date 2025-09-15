@@ -68,11 +68,13 @@ export class RelatorioAvaliacaoPageComponent {
               next: (det) => {
                 if (!this.data) return;
                 const fisica = Array.isArray(det?.fisica) ? det.fisica.map((t: any) => ({
+                  tipo_teste: String(t?.tipo_teste || ''),
                   teste: String(t?.teste || ''),
                   resultado: String(t?.resultado || ''),
                   unidade: String(t?.unidade || '')
                 })) : [];
                 const tecnica = Array.isArray(det?.tecnica) ? det.tecnica.map((e: any) => ({
+                  tipo_exercicio: String(e?.tipo_exercicio || ''),
                   exercicio: String(e?.exercicio || ''),
                   acertos: Number(e?.acertos || 0),
                   tentativas: Number(e?.tentativas || 0),
