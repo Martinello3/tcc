@@ -16,6 +16,8 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
     public DbSet<Video> Videos => Set<Video>();
     public DbSet<Relatorio> Relatorios => Set<Relatorio>();
     public DbSet<Lesao> Lesoes => Set<Lesao>();
+    public DbSet<JogadorFavorito> JogadoresFavoritos => Set<JogadorFavorito>();
+    public DbSet<Lembrete> Lembretes => Set<Lembrete>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -209,6 +211,39 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
             e.HasCheckConstraint("CK_lesoes_local", "local_corpo IN ('JL','TB','CM','OM','CT','OT')");
 
             e.HasOne(x => x.Jogador).WithMany(x => x.Lesoes).HasForeignKey(x => x.JogadorId);
+        });
+
+        // Lembretes
+        modelBuilder.Entity<Lembrete>(e =>
+        {
+            e.ToTable("lembretes");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UsuarioId).HasColumnName("usuario_id").IsRequired();
+            e.Property(x => x.Texto).HasColumnName("texto").HasMaxLength(500).IsRequired();
+            e.Property(x => x.Concluido).HasColumnName("concluido").HasDefaultValue(false);
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            e.HasIndex(x => new { x.UsuarioId, x.CreatedAt });
+            e.HasOne(x => x.Usuario).WithMany(u => u.Lembretes).HasForeignKey(x => x.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        // Jogadores favoritos (tabela de jun e7 e3o Usuario x Jogador)
+        modelBuilder.Entity<JogadorFavorito>(e =>
+        {
+            e.ToTable("jogadores_favoritos");
+            e.HasKey(x => new { x.UsuarioId, x.JogadorId });
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            e.HasOne(x => x.Usuario)
+             .WithMany(u => u.Favoritos)
+             .HasForeignKey(x => x.UsuarioId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Jogador)
+             .WithMany(j => j.FavoritadoPor)
+             .HasForeignKey(x => x.JogadorId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 #pragma warning restore CS0618

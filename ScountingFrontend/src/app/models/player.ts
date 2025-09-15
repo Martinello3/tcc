@@ -8,7 +8,7 @@ export interface Jogador {
   peso?: number | null;
   peDominante?: string | null;
   clubeAtualId?: number | null;
-  clubeAtual?: { id: number; nome: string } | null;
+  clubeAtual?: { id: number; nome: string; foto?: string | null } | null;
   foto?: string | null;
   observacoes?: string | null;
 }

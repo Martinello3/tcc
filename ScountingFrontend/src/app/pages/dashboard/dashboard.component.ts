@@ -1,10 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RecentActivityWidgetComponent } from '../../components/recent-activity/recent-activity.widget';
+import { FocusedPlayersWidgetComponent } from '../../components/focused-players/focused-players.widget';
+import { RemindersTasksWidgetComponent } from '../../components/reminders-tasks/reminders-tasks.widget';
+
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RecentActivityWidgetComponent, FocusedPlayersWidgetComponent, RemindersTasksWidgetComponent],
   template: `
 <div class="container py-3">
   <div class="d-flex align-items-center justify-content-between mb-3">
@@ -15,39 +19,13 @@ import { CommonModule } from '@angular/common';
     <div class="page-header-actions"><!-- ações futuras --></div>
   </div>
 
-  <div class="row g-3">
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center">
-          <i class="bi bi-graph-up-arrow text-success" style="font-size: 2rem"></i>
-          <div class="ms-2">
-            <div class="text-muted small">Relatórios recentes</div>
-            <div class="fs-5 fw-semibold">12</div>
-          </div>
-        </div>
-      </div>
+  <div class="row g-3 mt-2">
+    <div class="col-md-8 d-flex flex-column gap-3">
+      <app-focused-players-widget />
+      <app-recent-activity-widget />
     </div>
     <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center">
-          <i class="bi bi-person-bounding-box text-success" style="font-size: 2rem"></i>
-          <div class="ms-2">
-            <div class="text-muted small">Jogadores avaliados</div>
-            <div class="fs-5 fw-semibold">34</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center">
-          <i class="bi bi-camera-reels text-success" style="font-size: 2rem"></i>
-          <div class="ms-2">
-            <div class="text-muted small">Vídeos recentes</div>
-            <div class="fs-5 fw-semibold">6</div>
-          </div>
-        </div>
-      </div>
+      <app-reminders-tasks-widget />
     </div>
   </div>
 </div>

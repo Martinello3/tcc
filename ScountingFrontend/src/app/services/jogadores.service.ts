@@ -26,5 +26,18 @@ export class JogadoresService {
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+
+  // Favoritos
+  favoritoStatus(jogadorId: number, userId: number) {
+    return this.http.get<{ favorite: boolean }>(`${this.base}/${jogadorId}/favorito`, { params: { userId } as any });
+  }
+
+  toggleFavorito(jogadorId: number, userId: number) {
+    return this.http.post<{ favorite: boolean }>(`${this.base}/${jogadorId}/favoritar`, null, { params: { userId } as any });
+  }
+
+  favoritos(userId: number) {
+    return this.http.get<Jogador[]>(`${this.base}/favoritos`, { params: { userId } as any });
+  }
 }
 

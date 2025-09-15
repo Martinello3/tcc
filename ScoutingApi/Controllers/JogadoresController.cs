@@ -125,5 +125,48 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
         if (!string.IsNullOrWhiteSpace(oldFoto)) TryDeleteLocalFile(oldFoto);
         return NoContent();
     }
+
+    // Favoritos
+    // GET api/Jogadores/{id}/favorito?userId=123 -> { favorite: true|false }
+    [HttpGet("{id:int}/favorito")]
+    public async Task<ActionResult<object>> IsFavorito(int id, [FromQuery] int userId)
+    {
+        var exists = await _db.JogadoresFavoritos.AsNoTracking().AnyAsync(f => f.JogadorId == id && f.UsuarioId == userId);
+        return Ok(new { favorite = exists });
+    }
+
+    // POST api/Jogadores/{id}/favoritar?userId=123 -> toggle
+    [HttpPost("{id:int}/favoritar")]
+    public async Task<ActionResult<object>> ToggleFavorito(int id, [FromQuery] int userId)
+    {
+        var fav = await _db.JogadoresFavoritos.FindAsync(userId, id);
+        if (fav is null)
+        {
+            _db.JogadoresFavoritos.Add(new JogadorFavorito { UsuarioId = userId, JogadorId = id });
+            await _db.SaveChangesAsync();
+            return Ok(new { favorite = true });
+        }
+        else
+        {
+            _db.JogadoresFavoritos.Remove(fav);
+            await _db.SaveChangesAsync();
+            return Ok(new { favorite = false });
+        }
+    }
+
+    // GET api/Jogadores/favoritos?userId=123 -> lista de jogadores favoritados
+    [HttpGet("favoritos")]
+    public async Task<ActionResult<IEnumerable<Jogador>>> Favoritos([FromQuery] int userId)
+    {
+        var list = await _db.JogadoresFavoritos.AsNoTracking()
+            .Where(f => f.UsuarioId == userId)
+            .Select(f => f.JogadorId)
+            .ToListAsync();
+        var jogadores = await _db.Jogadores.AsNoTracking()
+            .Include(j => j.ClubeAtual)
+            .Where(j => list.Contains(j.Id))
+            .ToListAsync();
+        return Ok(jogadores);
+    }
 }
 

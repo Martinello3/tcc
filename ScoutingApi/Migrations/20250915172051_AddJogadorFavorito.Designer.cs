@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ScoutingApi.Data;
@@ -11,9 +12,11 @@ using ScoutingApi.Data;
 namespace ScoutingApi.Migrations
 {
     [DbContext(typeof(ScoutingDbContext))]
-    partial class ScoutingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250915172051_AddJogadorFavorito")]
+    partial class AddJogadorFavorito
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -369,43 +372,6 @@ namespace ScoutingApi.Migrations
                     b.ToTable("jogadores_favoritos", (string)null);
                 });
 
-            modelBuilder.Entity("ScoutingApi.Models.Lembrete", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Concluido")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("concluido");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Texto")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("texto");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer")
-                        .HasColumnName("usuario_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UsuarioId", "CreatedAt");
-
-                    b.ToTable("lembretes", (string)null);
-                });
-
             modelBuilder.Entity("ScoutingApi.Models.Lesao", b =>
                 {
                     b.Property<int>("Id")
@@ -677,17 +643,6 @@ namespace ScoutingApi.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("ScoutingApi.Models.Lembrete", b =>
-                {
-                    b.HasOne("ScoutingApi.Models.Usuario", "Usuario")
-                        .WithMany("Lembretes")
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("ScoutingApi.Models.Lesao", b =>
                 {
                     b.HasOne("ScoutingApi.Models.Jogador", "Jogador")
@@ -756,8 +711,6 @@ namespace ScoutingApi.Migrations
             modelBuilder.Entity("ScoutingApi.Models.Usuario", b =>
                 {
                     b.Navigation("Favoritos");
-
-                    b.Navigation("Lembretes");
                 });
 #pragma warning restore 612, 618
         }

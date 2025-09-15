@@ -9,6 +9,7 @@ import { ToastService } from '../../services/toast.service';
 import { JogadorFormComponent } from './jogador-form.component';
 import type { Jogador } from '../../models/player';
 import type { Avaliacao } from '../../models/avaliacao';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-perfil-jogador',
@@ -48,6 +49,12 @@ import type { Avaliacao } from '../../models/avaliacao';
             </div>
           </div>
           <div class="actions">
+            @if (userId) {
+              <button class="btn btn-sm" [ngClass]="isFavorito ? 'btn-success' : 'btn-outline-success'" (click)="onToggleFavorito()" [disabled]="favBusy">
+                <i class="bi" [ngClass]="isFavorito ? 'bi-star-fill' : 'bi-star'"></i>
+                <span class="ms-1">{{ isFavorito ? 'Favorito' : 'Favoritar' }}</span>
+              </button>
+            }
             <a class="btn btn-primary btn-sm" [routerLink]="['/avaliacoes', jogador?.id, 'novo']"><i class="bi bi-clipboard2-plus"></i> Nova Avaliação</a>
             <button class="btn btn-secondary btn-sm" (click)="onGerarRelatorio()" [disabled]="avaliacoes.length===0"><i class="bi bi-filetype-pdf"></i> Gerar Relatório</button>
           </div>
@@ -180,6 +187,7 @@ export class PerfilJogadorComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(JogadoresService);
   private router = inject(Router);
+  private auth = inject(AuthService);
 
   jogador: Jogador | null = null;
   private aval = inject(AvaliacoesService);
@@ -191,6 +199,9 @@ export class PerfilJogadorComponent implements OnInit {
   clubLogo: string | null = null;
   tab: 'resumo' | 'historico' | 'edicao' = 'resumo';
 
+  userId: number | null = null;
+  isFavorito = false;
+  favBusy = false;
 
   ngOnInit(): void {
     const idStr = this.route.snapshot.paramMap.get('id');
@@ -199,7 +210,8 @@ export class PerfilJogadorComponent implements OnInit {
       this.router.navigate(['/jogadores']);
       return;
     }
-    this.api.get(id).subscribe({ next: (j) => { this.jogador = j; const cid = (j as any).clubeAtualId as number | null | undefined; if (cid) { this.clubes.get(cid).subscribe({ next: (c) => this.clubLogo = c.foto ?? null }); } }, error: () => this.router.navigate(['/jogadores']) });
+    this.userId = this.auth.user()?.id ?? null;
+    this.api.get(id).subscribe({ next: (j) => { this.jogador = j; const cid = (j as any).clubeAtualId as number | null | undefined; if (cid) { this.clubes.get(cid).subscribe({ next: (c) => this.clubLogo = c.foto ?? null }); } if (this.userId) { this.api.favoritoStatus(id, this.userId).subscribe({ next: (r) => this.isFavorito = !!r?.favorite }); } }, error: () => this.router.navigate(['/jogadores']) });
     this.aval.byJogador(id).subscribe({ next: (list) => {
       this.avaliacoes = [...(list ?? [])].sort((a, b) => {
         const da = new Date((a as any).data).getTime() || 0;
@@ -207,6 +219,13 @@ export class PerfilJogadorComponent implements OnInit {
         return db - da;
       });
     }});
+  }
+
+  onToggleFavorito() {
+    const jogadorId = this.jogador?.id;
+    if (!jogadorId || !this.userId) return;
+    this.favBusy = true;
+    this.api.toggleFavorito(jogadorId, this.userId).subscribe({ next: (r) => { this.isFavorito = !!r?.favorite; this.favBusy = false; }, error: () => { this.favBusy = false; this.toast.error('Não foi possível atualizar favorito'); } });
   }
 
   imgSrc(val?: string | null): string | null {
