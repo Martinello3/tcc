@@ -65,5 +65,75 @@ public class UsuariosController : CrudBase<ScoutingDbContext, Usuario>
         }
         return result;
     }
+
+    public class UpdateMeuPerfilDto
+    {
+        public string? Nome { get; set; }
+        public string? Foto { get; set; }
+    }
+
+    public class DeleteContaDto
+    {
+        public string Senha { get; set; } = string.Empty;
+        public int? UserId { get; set; } // fallback se necessário
+    }
+
+    [HttpPut("meu-perfil")]
+    public async Task<IActionResult> UpdateMeuPerfil([FromBody] UpdateMeuPerfilDto dto, [FromQuery] int? userId)
+    {
+        if (userId is null || userId <= 0) return BadRequest(new { message = "userId é obrigatório" });
+        var u = await _db.Usuarios.FindAsync(userId.Value);
+        if (u is null) return NotFound();
+        if (!string.IsNullOrWhiteSpace(dto.Nome)) u.Nome = dto.Nome!.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Foto)) u.Foto = dto.Foto!.Trim();
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpPost("meu-perfil/avatar")]
+    [RequestSizeLimit(1024L * 1024 * 10)] // 10MB
+    public async Task<IActionResult> UploadMeuAvatar([FromForm] IFormFile file, [FromQuery] int? userId)
+    {
+        if (userId is null || userId <= 0) return BadRequest(new { message = "userId é obrigatório" });
+        var u = await _db.Usuarios.FindAsync(userId.Value);
+        if (u is null) return NotFound();
+        if (file == null || file.Length == 0) return BadRequest(new { message = "Arquivo não enviado" });
+        var ext = Path.GetExtension(file.FileName);
+        var okExt = new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
+        if (!okExt.Contains(ext, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Extensão de imagem não suportada" });
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "fotos", "usuarios");
+        Directory.CreateDirectory(uploadsDir);
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var destPath = Path.Combine(uploadsDir, fileName);
+        await using (var stream = System.IO.File.Create(destPath))
+        {
+            await file.CopyToAsync(stream);
+        }
+        var publicPath = $"/uploads/fotos/usuarios/{fileName}";
+
+        var oldFoto = u.Foto;
+        u.Foto = publicPath;
+        await _db.SaveChangesAsync();
+        TryDeleteLocalFile(oldFoto);
+        return Ok(new { path = publicPath });
+    }
+
+    [HttpDelete("minha-conta")]
+    public async Task<IActionResult> DeleteMinhaConta([FromBody] DeleteContaDto dto, [FromQuery] int? userId)
+    {
+        var uid = userId ?? dto.UserId;
+        if (uid is null || uid <= 0) return BadRequest(new { message = "userId é obrigatório" });
+        if (string.IsNullOrWhiteSpace(dto.Senha)) return BadRequest(new { message = "Senha é obrigatória" });
+        var u = await _db.Usuarios.FindAsync(uid.Value);
+        if (u is null) return NotFound();
+        if (!string.Equals(u.Senha, dto.Senha, StringComparison.Ordinal))
+            return Unauthorized(new { message = "Senha incorreta" });
+        var oldFoto = u.Foto;
+        _db.Usuarios.Remove(u);
+        await _db.SaveChangesAsync();
+        TryDeleteLocalFile(oldFoto);
+        return NoContent();
+    }
 }
 
