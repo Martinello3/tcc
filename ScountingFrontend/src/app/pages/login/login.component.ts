@@ -48,10 +48,6 @@ import { DialogService } from '../../services/dialog.service';
             <label class="form-label">Senha</label>
             <input [(ngModel)]="password" name="password" type="password" class="form-control form-control-lg" required />
           </div>
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="rememberMe">
-            <label class="form-check-label" for="rememberMe">Lembrar-me</label>
-          </div>
           <button class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center" [disabled]="f.invalid || loading">
             @if (!loading) { <span>Entrar</span> }
             @if (loading) {

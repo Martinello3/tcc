@@ -129,7 +129,7 @@ import type { Jogador } from '../../models/player';
         <div class="scroll-container" (wheel)="onWheel($event)">
           <div class="players-row">
             @for (p of favoritos; track p.id) {
-              <a class="player-card text-decoration-none" [routerLink]="['/jogadores', p.id]">
+              <a class="player-card text-decoration-none" [routerLink]="['/jogadores', p.id, 'perfil']">
                 <img class="player-bg" [src]="imgSrc(p.foto) || '/brand/user-placeholder.png'" alt="foto" />
                 <div class="player-overlay"></div>
                 <img *ngIf="p.clubeAtual?.foto" class="club-badge" [src]="imgSrc(p.clubeAtual?.foto) || ''" alt="clube" />

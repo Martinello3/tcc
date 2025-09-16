@@ -1,62 +1,79 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ElementRef, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterOutlet],
+  imports: [CommonModule, RouterLink, RouterOutlet, RouterLinkActive],
   styles: [`
-  .sidebar { width: 260px; }
-  .menu-item { cursor: pointer; border-radius: .5rem; padding: .5rem .5rem; transition: background-color .2s ease; }
+  .sidebar { width: 260px; transition: width .2s ease; }
+  .sidebar.collapsed { width: 72px; }
+  .brand-text { transition: opacity .2s ease; }
+  .sidebar.collapsed .brand-text { opacity: 0; visibility: hidden; width: 0; }
+  .menu-item { cursor: pointer; border-radius: .5rem; padding: .5rem .5rem; transition: background-color .2s ease,color .2s ease; }
   .menu-item:hover { background-color: rgba(255,255,255,.06); }
-  .menu-item.active { background-color: rgba(16,185,129,.15); color: #10B981; font-weight: 600; }
-  .menu-link { text-decoration: none; color: inherit; display: flex; align-items: center; gap: .5rem; width: 100%; }
-  .profile-quick { cursor: pointer; border-radius: .5rem; padding: .375rem; transition: background-color .2s ease; }
-  .profile-quick:hover { background-color: rgba(255,255,255,.06); }
+  .menu-link { text-decoration: none; color: inherit; display: flex; align-items: center; gap: .5rem; width: 100%; padding: .375rem .5rem .375rem .75rem; }
+  .active-link { border-left: 6px solid #10B981; background-color: rgba(16,185,129,.18); color: #10B981; padding-left: 1rem; }
+  .menu-text { white-space: nowrap; }
+  .sidebar.collapsed .menu-text { display: none; }
+  .profile-toggle { cursor: pointer; border-radius: .5rem; padding: .375rem; transition: background-color .2s ease; width:100%; display:flex; align-items:center; gap:.5rem; }
+  .profile-toggle:hover { background-color: rgba(255,255,255,.06); }
+  .profile-texts { line-height: 1.1; }
+  .sidebar.collapsed .profile-texts { display: none; }
+  .dropdown-menu-dark { --bs-dropdown-bg: #1f2937; }
+  .divider { border-top: 1px solid var(--bs-border-color-translucent); margin: .75rem 0; }
+  .dropdown { position: relative; }
+  .dropdown-menu { display: none; position: absolute; top: 100%; right: 0; min-width: 200px; margin-top: .25rem; }
+  .dropdown-menu.show { display: block; }
   `],
   template: `
 <div class="d-flex min-vh-100">
   <!-- Sidebar -->
-  <nav class="sidebar border-end border p-3 bg-elev">
+  <nav class="sidebar border-end border p-3 bg-elev" [class.collapsed]="collapsed">
     <div class="d-flex align-items-center mb-3">
       <img src="/brand/seu-olheiro.png" alt="Seu Olheiro" style="height: 24px; width: auto;" />
-      <span class="ms-2 fw-semibold">Olheiro Pro</span>
+      <span class="ms-2 fw-semibold brand-text">Olheiro Pro</span>
     </div>
-    <div class="text-muted text-uppercase small mb-2">Navegação</div>
     <ul class="list-unstyled">
-      <li class="menu-item" (click)="go('')">
-        <a class="menu-link" routerLink="/">
+      <li class="menu-item">
+        <a class="menu-link" routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">
           <i class="bi bi-speedometer2"></i>
-          <span>Dashboard</span>
+          <span class="menu-text">Dashboard</span>
         </a>
       </li>
-      <li class="menu-item" (click)="go('/jogadores')">
-        <a class="menu-link" routerLink="/jogadores">
+      <li class="menu-item">
+        <a class="menu-link" routerLink="/jogadores" routerLinkActive="active-link">
           <i class="bi bi-people"></i>
-          <span>Jogadores</span>
+          <span class="menu-text">Jogadores</span>
         </a>
       </li>
-      <li class="menu-item" (click)="go('/clubes')">
-        <a class="menu-link" routerLink="/clubes">
+      <li class="menu-item">
+        <a class="menu-link" routerLink="/clubes" routerLinkActive="active-link">
           <i class="bi bi-building"></i>
-          <span>Clubes</span>
+          <span class="menu-text">Clubes</span>
         </a>
       </li>
     </ul>
-    <div class="border-top mt-3 pt-3">
-      <div class="small text-muted">Perfil</div>
-      <div class="d-flex align-items-center mt-1 profile-quick" (click)="go('/profile')">
+    <div class="divider"></div>
+    <div class="dropdown" #profileDrop>
+      <div class="profile-toggle" (click)="toggleProfileMenu($event)" aria-expanded="false">
         <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
           <i class="bi bi-person"></i>
         </div>
-        <div class="ms-2">
+        <div class="ms-2 profile-texts">
           <div class="fw-semibold">{{ user?.nome || 'Olheiro' }}</div>
           <div class="text-muted small">{{ user?.email || 'olheiro@clube.com' }}</div>
         </div>
+        <i class="bi bi-caret-down-fill ms-auto small"></i>
       </div>
+      <ul class="dropdown-menu dropdown-menu-dark shadow" [class.show]="showProfileMenu">
+        <li><a class="dropdown-item" routerLink="/profile" (click)="closeProfileMenu()"><i class="bi bi-person me-2"></i>Minha Conta</a></li>
+        <li><hr class="dropdown-divider" /></li>
+        <li><button class="dropdown-item" (click)="onLogout(); closeProfileMenu()"><i class="bi bi-box-arrow-right me-2"></i>Sair</button></li>
+      </ul>
     </div>
   </nav>
 
@@ -64,6 +81,9 @@ import { AuthService } from '../../auth/auth.service';
   <div class="flex-grow-1">
     <header class="d-flex align-items-center justify-content-between border-bottom border px-3 py-2 bg-elev">
       <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-secondary btn-sm" (click)="toggleSidebar()" title="Colapsar menu">
+          <i class="bi" [class.bi-chevron-double-left]="!collapsed" [class.bi-chevron-double-right]="collapsed"></i>
+        </button>
         <i class="bi bi-geo-alt text-success"></i>
         <strong>Dashboard</strong>
       </div>
@@ -76,7 +96,6 @@ import { AuthService } from '../../auth/auth.service';
           </div>
         }
         <div class="d-none d-sm-block small">{{ headerName }}</div>
-        <button class="btn btn-secondary btn-sm" (click)="onLogout()"><i class="bi bi-box-arrow-right"></i> Sair</button>
       </div>
     </header>
     <main class="p-3 position-relative">
@@ -91,6 +110,10 @@ export class HomeComponent implements OnInit {
   private router = inject(Router);
   private http = inject(HttpClient);
   user = this.auth.user();
+
+  collapsed = false;
+  showProfileMenu = false;
+  @ViewChild('profileDrop') profileDrop?: ElementRef<HTMLElement>;
 
   foto: string | null = null;
   apiUserName: string | null = null;
@@ -118,13 +141,20 @@ export class HomeComponent implements OnInit {
   }
   get headerAvatarUrl(): string | null { return this.resolveUrl(this.foto); }
 
-  go(path: string) {
-    this.router.navigate([path]);
+  toggleSidebar() { this.collapsed = !this.collapsed; }
+
+  toggleProfileMenu(ev: MouseEvent) { ev.stopPropagation(); this.showProfileMenu = !this.showProfileMenu; }
+  closeProfileMenu() { this.showProfileMenu = false; }
+
+  @HostListener('document:click', ['$event'])
+  onDocClick(ev: MouseEvent) {
+    const el = this.profileDrop?.nativeElement;
+    if (!el) { this.showProfileMenu = false; return; }
+    if (!el.contains(ev.target as Node)) { this.showProfileMenu = false; }
   }
 
-  onLogout() {
-    this.auth.logout();
-    this.router.navigate(['/login']);
-  }
+  go(path: string) { this.router.navigate([path]); }
+
+  onLogout() { this.auth.logout(); this.router.navigate(['/login']); }
 }
 
