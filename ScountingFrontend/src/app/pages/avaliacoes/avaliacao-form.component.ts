@@ -15,7 +15,7 @@ import type { Jogador } from '../../models/player';
   <div class="container">
     <div class="card shadow-sm sticky-top mb-3" style="top: 0; z-index: 1020;">
       <div class="card-body d-flex align-items-center gap-3">
-        <a class="btn btn-sm btn-link" [routerLink]="['/avaliacoes', jogadorId]"><i class="bi bi-arrow-left"></i> Voltar</a>
+        <a class="btn btn-sm btn-link" [routerLink]="['/jogadores', jogadorId, 'perfil']"><i class="bi bi-arrow-left"></i> Voltar</a>
         <img *ngIf="jogador()?.foto" [src]="imgSrc(jogador()?.foto)" alt="foto" class="rounded" style="width:48px;height:48px;object-fit:cover" />
         <div>
           <div class="fw-semibold">Nova Avaliação — {{ jogador()?.nome || '-' }}</div>
@@ -214,7 +214,7 @@ import type { Jogador } from '../../models/player';
 
       <div class="card-footer d-flex justify-content-between align-items-center gap-2 bg-white">
         <div class="ms-auto d-flex gap-2">
-          <a class="btn btn-outline-secondary" [routerLink]="['/avaliacoes', jogadorId]">Cancelar</a>
+          <a class="btn btn-outline-secondary" [routerLink]="['/jogadores', jogadorId, 'perfil']">Cancelar</a>
           <button class="btn btn-success" type="submit" [disabled]="submitting">
             <span class="spinner-border spinner-border-sm me-1" *ngIf="submitting"></span>
             <i class="bi bi-check2"></i> Finalizar Avaliação

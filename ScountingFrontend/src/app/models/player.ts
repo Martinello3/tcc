@@ -13,8 +13,6 @@ export interface Jogador {
   observacoes?: string | null;
   // Campos de insight entregues pela API na listagem
   notaGeral?: number | null;
-  numeroDeAvaliacoes?: number | null;
-  dataUltimaAvaliacao?: string | null;
 }
 
 export interface JogadorUpsert {

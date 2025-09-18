@@ -6,6 +6,10 @@ import { JogadoresFacade } from '../../facades/jogadores.facade';
 import { ToastService } from '../../services/toast.service';
 import { DialogService } from '../../services/dialog.service';
 import { ClubesService } from '../../services/clubes.service';
+import { AuthService } from '../../auth/auth.service';
+import { JogadoresService } from '../../services/jogadores.service';
+import { AvaliacoesService } from '../../services/avaliacoes.service';
+import { RelatoriosService } from '../../services/relatorios.service';
 
 @Component({
   selector: 'app-jogador-list',
@@ -24,19 +28,32 @@ import { ClubesService } from '../../services/clubes.service';
     .flag-img { transition: all 0.2s ease; cursor: pointer; }
     .flag-img:hover { border: 1px solid var(--bs-primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-    .player-cell { display: grid; grid-template-columns: 64px 1fr 64px; column-gap: 40px; align-items: center; min-height: 64px; }
+    .player-cell { display: grid; grid-template-columns: 64px 1fr; column-gap: 24px; align-items: center; min-height: 64px; }
     .avatar-slot { grid-column: 1; justify-self: center; }
     .player-name { grid-column: 2; text-align: center; white-space: normal; word-break: break-word; }
 
     .colhead { display: flex; flex-direction: column; align-items: center; gap: .25rem; }
     .col-ico { font-size: 22px; color: var(--bs-primary); line-height: 1; }
-    .w-player { width: 28%; min-width: 280px; }
-    .w-nac { width: 18%; }
+    .w-player { width: 32%; min-width: 320px; }
+    .w-nac { width: 16%; }
     .w-age { width: 8%; }
-    .w-pos { width: 19%; }
+    .w-pos { width: 16%; }
     .w-foot { width: 8%; }
-    .w-club { width: 19%; }
+    .w-club { width: 16%; }
+
+    /* Novas colunas de insight */
+    .w-rating { width: 12%; }
+    .w-evals { width: 8%; }
+    .w-last { width: 14%; }
+    .rating-badge { border-radius: 999px; padding: .2rem .6rem; font-weight: 600; min-width: 46px; display: inline-block; }
+
+    /* Ações rápidas */
+    .w-actions { width: 16%; }
+    .row-actions { opacity: 1; white-space: nowrap; }
+    .wide-table { min-width: 1280px; }
+
   `],
+
   template: `
 <div class="container">
   <div class="d-flex align-items-center justify-content-between mb-3">
@@ -61,35 +78,60 @@ import { ClubesService } from '../../services/clubes.service';
     }
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle mb-0">
+        <table class="table table-striped table-hover align-middle mb-0 wide-table">
           @if (!facade.loading() && displayed().length === 0) {
             <caption class="text-center py-4 text-muted">Nenhum jogador encontrado</caption>
           }
+
           <thead>
             <tr>
+              <th class="text-end w-actions">
+                <div class="colhead"><i class="bi bi-lightning-charge col-ico"></i><div>Ações</div></div>
+              </th>
               <th class="w-player">
                 <div class="colhead"><i class="bi bi-person col-ico"></i><div>Jogador</div></div>
               </th>
+              <th class="text-center w-club">
+                <div class="colhead"><i class="bi bi-shield-check col-ico"></i><div>Clube</div></div>
+              </th>
               <th class="text-center w-nac">
-                <div class="colhead"><i class="bi bi-globe2 col-ico"></i><div>Nacionalidade</div></div>
+                <div class="colhead"><i class="bi bi-globe col-ico"></i><div>Nacionalidade</div></div>
               </th>
               <th class="text-center w-age">
-                <div class="colhead"><i class="bi bi-calendar3 col-ico"></i><div>Idade</div></div>
+                <div class="colhead"><i class="bi bi-calendar-event col-ico"></i><div>Idade</div></div>
               </th>
               <th class="text-center w-pos">
-                <div class="colhead"><i class="bi bi-compass col-ico"></i><div>Posição</div></div>
+                <div class="colhead"><i class="bi bi-geo-alt col-ico"></i><div>Posição</div></div>
               </th>
               <th class="text-center w-foot">
-                <div class="colhead"><i class="bi bi-hand-index-thumb col-ico"></i><div>Pé</div></div>
+                <div class="colhead"><i class="bi bi-hand-thumbs-up col-ico"></i><div>Pé</div></div>
               </th>
-              <th class="text-center w-club">
-                <div class="colhead"><i class="bi bi-people col-ico"></i><div>Clube</div></div>
+              <th class="text-center w-rating">
+                <div class="colhead"><i class="bi bi-star-fill col-ico"></i><div>Nota Geral</div></div>
               </th>
             </tr>
           </thead>
           <tbody>
             @for (j of displayed(); track j.id) {
               <tr class="row-click" (click)="goTo(j.id)">
+                <td class="text-end w-actions">
+                  <div class="row-actions">
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                            (click)="onToggleFav(j, $event)"
+                            [title]="isFav(j.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'">
+                      <i class="bi" [ngClass]="isFav(j.id) ? 'bi-star-fill text-warning' : 'bi-star'"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm me-1"
+                            (click)="onGerarRelatorio(j, $event)" title="Gerar relatório da última avaliação">
+                      <i class="bi bi-filetype-pdf"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                            (click)="onDelete(j); $event.stopPropagation()" title="Excluir jogador">
+                      <i class="bi bi-trash text-danger"></i>
+                    </button>
+                  </div>
+                </td>
+
                 <td class="w-player">
                   <div class="player-cell">
                     <div class="avatar-slot">
@@ -98,13 +140,20 @@ import { ClubesService } from '../../services/clubes.service';
                     <div class="fw-semibold player-name">{{ j.nome }}</div>
                   </div>
                 </td>
+                <td class="text-center w-club">
+                  @if (clubesById.get(j.clubeAtualId || -1)?.foto) {
+                    <img class="club-logo" [src]="imgSrc(clubesById.get(j.clubeAtualId || -1)?.foto || null)" alt="clube" />
+                  } @else {
+                    <span class="text-muted">-</span>
+                  }
+                </td>
                 <td class="text-center w-nac align-middle">
                   <div class="d-flex align-items-center justify-content-center" style="min-height: 30px;">
                     @if (countryCodeFrom(j.nacionalidade) && !flagBroken.has(j.id)) {
                       <img [src]="flagUrl(countryCodeFrom(j.nacionalidade)!)" alt="flag" width="44" height="30"
                            class="flag-img" style="border-radius:2px" (error)="onFlagError(j.id)" />
                     } @else {
-                      <i class="bi bi-globe2 text-primary" aria-label="Nacionalidade"></i>
+                      <i class="bi bi-globe text-primary" aria-label="Nacionalidade"></i>
                     }
                   </div>
                 </td>
@@ -118,12 +167,8 @@ import { ClubesService } from '../../services/clubes.service';
                 <td class="text-center w-foot">
                   <span class="badge text-bg-dark border">{{ j.peDominante || '-' }}</span>
                 </td>
-                <td class="text-center w-club">
-                  @if (clubesById.get(j.clubeAtualId || -1)?.foto) {
-                    <img class="club-logo" [src]="imgSrc(clubesById.get(j.clubeAtualId || -1)?.foto || null)" alt="clube" />
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
+                <td class="text-center w-rating">
+                  <span class="rating-badge" [ngClass]="ratingClass(j.notaGeral)">{{ j.notaGeral != null ? (j.notaGeral | number:'1.1-1') : '-' }}</span>
                 </td>
               </tr>
             }
@@ -144,6 +189,16 @@ export class JogadorListComponent implements OnInit {
 
 
   flagBroken = new Set<number>();
+  // Serviços para ações rápidas
+  private auth = inject(AuthService);
+  private jogSvc = inject(JogadoresService);
+  private avalSvc = inject(AvaliacoesService);
+  private relSvc = inject(RelatoriosService);
+
+  // Estado de favoritos
+  favoriteIds = signal<Set<number>>(new Set<number>());
+  private userId: number | null = null;
+
   onFlagError(id: number) { this.flagBroken.add(id); }
 
   private dialog = inject(DialogService);
@@ -158,6 +213,15 @@ export class JogadorListComponent implements OnInit {
     this.clubesSvc.list().subscribe({ next: (res) => {
       res.forEach(c => this.clubesById.set(c.id, { id: c.id, nome: c.nome, foto: c.foto ?? null }));
     }});
+
+    // Carrega favoritos do usuário logado (se houver)
+    this.userId = this.auth.user()?.id ?? null;
+    if (this.userId) {
+      this.jogSvc.favoritos(this.userId).subscribe({ next: (arr) => {
+        const set = new Set<number>((arr || []).map(j => j.id));
+        this.favoriteIds.set(set);
+      }});
+    }
   }
 
   onFilter(value: string) {
@@ -181,12 +245,68 @@ export class JogadorListComponent implements OnInit {
     if (!dateISO) return '-';
     const birth = new Date(dateISO);
     if (isNaN(birth.getTime())) return '-';
+
+
     const today = new Date();
     let age = today.getFullYear() - birth.getFullYear();
     const m = today.getMonth() - birth.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return String(age);
   }
+
+  ratingClass(n?: number | null) {
+    if (n == null) return { 'text-bg-secondary': true } as any;
+    if (n >= 8.0) return { 'bg-success': true, 'text-white': true } as any;
+    if (n >= 6.5) return { 'bg-warning': true, 'text-dark': true } as any;
+    return { 'bg-danger': true, 'text-white': true } as any;
+  }
+
+  isFav(id: number): boolean {
+    return this.favoriteIds().has(id);
+  }
+
+  onToggleFav(j: Jogador, ev: MouseEvent) {
+    ev.stopPropagation();
+    if (!this.userId) { this.toast.error('É necessário estar logado para favoritar'); return; }
+    this.jogSvc.toggleFavorito(j.id, this.userId).subscribe({ next: (r) => {
+      const set = new Set(this.favoriteIds());
+      if (r.favorite) set.add(j.id); else set.delete(j.id);
+      this.favoriteIds.set(set);
+      this.toast.success(r.favorite ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
+    }, error: () => this.toast.error('Não foi possível atualizar favorito') });
+  }
+
+  onGerarRelatorio(j: Jogador, ev: MouseEvent) {
+    ev.stopPropagation();
+    this.avalSvc.byJogador(j.id).subscribe({ next: (list) => {
+      const arr = (list || []).slice().sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      if (arr.length === 0) { this.toast.info('Jogador não possui avaliações'); return; }
+      const last = arr[0] as any;
+      const avaliacaoId = last?.id as number | undefined;
+      if (!avaliacaoId) { this.toast.error('Não foi possível identificar a última avaliação'); return; }
+      // Abre a mesma página/layou de relatório usada no perfil do jogador
+      this.router.navigate(['/relatorios/avaliacao', j.id, avaliacaoId]);
+    }, error: () => this.toast.error('Falha ao obter avaliações do jogador') });
+  }
+
+  formatUltimaAvaliacao(dateISO?: string | null): string {
+    if (!dateISO) return 'Nunca avaliado';
+    const d = new Date(dateISO);
+    if (isNaN(d.getTime())) return 'Nunca avaliado';
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (days <= 30) return `há ${days} dia${days === 1 ? '' : 's'}`;
+    return this.formatDateBR(d);
+  }
+
+  private formatDateBR(d: Date): string {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
 
   countryCodeFrom(n?: string | null): string | null {
     if (!n) return null;

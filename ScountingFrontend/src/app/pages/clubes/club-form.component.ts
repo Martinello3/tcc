@@ -15,7 +15,7 @@ import { ToastService } from '../../services/toast.service';
   <div class="d-flex align-items-center justify-content-between mb-3">
     <h3 class="m-0"><i class="bi bi-building text-success"></i> {{ id ? 'Editar Clube' : 'Novo Clube' }}</h3>
     <div class="page-header-actions">
-      <a class="btn btn-outline-secondary me-2" routerLink="/clubes">Voltar</a>
+      <a class="btn btn-sm btn-link me-2" routerLink="/clubes"><i class="bi bi-arrow-left"></i> Voltar</a>
       <button class="btn btn-success d-inline-flex align-items-center gap-2" (click)="onSave()" [disabled]="form.invalid || saving">
         @if (!saving) { <span>Salvar</span> } @else { <span class="spinner-border spinner-border-sm" role="status"></span><span>Salvando...</span> }
       </button>

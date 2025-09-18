@@ -29,6 +29,10 @@ import { AuthService } from '../../auth/auth.service';
   `],
   template: `
   <div class="container">
+    <div class="mb-2">
+      <a class="btn btn-sm btn-link" [routerLink]="['/jogadores']"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
     <div class="card mb-3">
       <div class="card-body">
         <div class="header">

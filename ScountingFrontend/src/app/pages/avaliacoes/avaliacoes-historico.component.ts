@@ -16,7 +16,7 @@ import type { Jogador } from '../../models/player';
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h3 class="m-0"><i class="bi bi-clipboard2-check text-success"></i> Histórico de Avaliações — {{ jogador()?.nome || '-' }}</h3>
       <div class="page-header-actions d-flex align-items-center gap-2">
-        <a class="btn btn-outline-secondary" [routerLink]="['/jogadores', jogadorId, 'perfil']">Voltar</a>
+        <a class="btn btn-sm btn-link" [routerLink]="['/jogadores', jogadorId, 'perfil']"><i class="bi bi-arrow-left"></i> Voltar</a>
         <a class="btn btn-success d-inline-flex align-items-center gap-2" [routerLink]="['/avaliacoes', jogadorId, 'novo']"><i class="bi bi-plus-lg"></i> <span>Novo</span></a>
       </div>
     </div>
