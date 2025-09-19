@@ -23,13 +23,23 @@ public class RelatoriosController : CrudBase<ScoutingDbContext, Relatorio>
         _db = db;
     }
 
+    private int? GetUserIdFromHeader()
+    {
+        var h = Request.Headers["X-User-Id"].FirstOrDefault();
+        if (int.TryParse(h, out var id)) return id;
+        return null;
+    }
+
     [HttpGet]
     public override async Task<ActionResult<IEnumerable<Relatorio>>> GetAll()
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
         var list = await _db.Relatorios
             .AsNoTracking()
             .Include(r => r.Jogador)
             .Include(r => r.Avaliacao)
+            .Where(r => r.Jogador != null && r.Jogador.UsuarioId == uid)
             .OrderByDescending(r => r.DataGeracao)
             .ToListAsync();
 
@@ -45,10 +55,12 @@ public class RelatoriosController : CrudBase<ScoutingDbContext, Relatorio>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<Relatorio>> GetOne(int id)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
         var r = await _db.Relatorios
             .Include(x => x.Jogador)
             .Include(x => x.Avaliacao)
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id && x.Jogador != null && x.Jogador.UsuarioId == uid);
         if (r == null) return NotFound();
 
         var baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -60,17 +72,19 @@ public class RelatoriosController : CrudBase<ScoutingDbContext, Relatorio>
     [HttpPost("gerar/{avaliacaoId:int}")]
     public async Task<ActionResult<Relatorio>> Gerar(int avaliacaoId)
     {
-        // Carrega avaliação e jogador
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        // Carrega avaliação e jogador do usuário
         var avaliacao = await _db.Avaliacoes
             .Include(a => a.Jogador)
-            .FirstOrDefaultAsync(a => a.Id == avaliacaoId);
+            .FirstOrDefaultAsync(a => a.Id == avaliacaoId && a.Jogador != null && a.Jogador.UsuarioId == uid);
         if (avaliacao == null)
             return NotFound("Avaliação não encontrada");
 
         var jogador = await _db.Jogadores
             .Include(j => j.ClubeAtual)
             .Include(j => j.Lesoes)
-            .FirstOrDefaultAsync(j => j.Id == avaliacao.JogadorId);
+            .FirstOrDefaultAsync(j => j.Id == avaliacao.JogadorId && j.UsuarioId == uid);
         if (jogador == null)
             return NotFound("Jogador não encontrado");
 

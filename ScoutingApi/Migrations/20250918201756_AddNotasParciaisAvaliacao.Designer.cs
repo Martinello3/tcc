@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ScoutingApi.Data;
@@ -11,9 +12,11 @@ using ScoutingApi.Data;
 namespace ScoutingApi.Migrations
 {
     [DbContext(typeof(ScoutingDbContext))]
-    partial class ScoutingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250918201756_AddNotasParciaisAvaliacao")]
+    partial class AddNotasParciaisAvaliacao
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

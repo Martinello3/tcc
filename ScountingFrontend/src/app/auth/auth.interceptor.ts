@@ -12,9 +12,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
 
   const token = auth.token?.() ?? null;
+  const user = auth.user?.() ?? null;
 
-  const authReq = token
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+  const setHeaders: Record<string, string> = {};
+  if (token) setHeaders["Authorization"] = `Bearer ${token}`;
+  if (user && typeof (user as any).id === 'number') setHeaders["X-User-Id"] = String((user as any).id);
+
+  const authReq = Object.keys(setHeaders).length > 0
+    ? req.clone({ setHeaders })
     : req;
 
   return next(authReq).pipe(

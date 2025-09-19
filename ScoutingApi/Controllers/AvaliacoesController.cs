@@ -8,9 +8,21 @@ namespace ScoutingApi.Controllers;
 
 public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbContext, Avaliacao>(db)
 {
+    private int? GetUserIdFromHeader()
+    {
+        var h = Request.Headers["X-User-Id"].FirstOrDefault();
+        if (int.TryParse(h, out var id)) return id;
+        return null;
+    }
+
     [HttpGet("by-jogador/{jogadorId:int}")]
     public async Task<ActionResult<IEnumerable<Avaliacao>>> GetByJogador(int jogadorId)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        // Garante que o jogador pertence ao usuário
+        var jogadorOk = await _db.Jogadores.AsNoTracking().AnyAsync(j => j.Id == jogadorId && j.UsuarioId == uid);
+        if (!jogadorOk) return NotFound();
         var list = await _db.Avaliacoes
             .AsNoTracking()
             .Where(a => a.JogadorId == jogadorId)
@@ -22,19 +34,36 @@ public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbCon
     [HttpPost]
     public override async Task<ActionResult<Avaliacao>> Create(Avaliacao entity)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        // Garante que o jogador pertence ao usuário logado
+        var posicao = await _db.Jogadores.AsNoTracking()
+            .Where(j => j.Id == entity.JogadorId && j.UsuarioId == uid)
+            .Select(j => j.Posicao)
+            .FirstOrDefaultAsync();
+        if (posicao == null) return NotFound(new { message = "Jogador não encontrado" });
+
+        // Força avaliador = usuário logado
+        entity.AvaliadorId = uid.Value;
+
         // Data default para agora (UTC), se não informado
         if (entity.Data == default)
             entity.Data = DateTimeOffset.UtcNow;
 
-        // Calcula médias por dimensão (0..10) a partir dos campos legados recebidos
-        decimal tecnica = Avg(entity.ControleBola, entity.Passe, entity.Finalizacao, entity.Drible);
-        decimal tatica = Avg(entity.Posicionamento, entity.LeituraJogo, entity.TomadaDecisao);
-        decimal fisica = Avg(entity.Velocidade, entity.Resistencia, entity.Forca);
-        decimal psico = Avg(entity.Disciplina, entity.Lideranca, entity.Proatividade, entity.InteligenciaEmocional);
+        // Fallback: calcula parciais a partir dos campos legados (0..10 já)
+        decimal tec = Avg(entity.ControleBola, entity.Passe, entity.Finalizacao, entity.Drible);
+        decimal tat = Avg(entity.Posicionamento, entity.LeituraJogo, entity.TomadaDecisao, entity.Disciplina, entity.Lideranca, entity.Proatividade, entity.InteligenciaEmocional);
+        decimal fis = Avg(entity.Velocidade, entity.Resistencia, entity.Forca);
 
-        // Fórmula de nota final (ajuste de pesos conforme necessidade)
-        decimal nota = tecnica * 0.35m + tatica * 0.25m + fisica * 0.25m + psico * 0.15m;
-        entity.NotaFinal = Math.Round(nota, 2, MidpointRounding.AwayFromZero);
+        // Guarda parciais (0..10)
+        entity.NotaTecnica = Round2(tec);
+        entity.NotaTaticaComportamental = Round2(tat);
+        entity.NotaFisica = Round2(fis);
+
+        // Cálculo ponderado por posição (usa 0..100 na ponderação, divide por 10)
+        var (wFis, wTec, wTat) = PesosPorPosicao(posicao);
+        var final = ((fis * 10m) * wFis + (tec * 10m) * wTec + (tat * 10m) * wTat) / 10m;
+        entity.NotaFinal = Round2(final);
 
         // Persiste avaliação principal
         _db.Avaliacoes.Add(entity);
@@ -82,19 +111,94 @@ public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbCon
         return nums.Sum() / nums.Count;
 
     }
+    private static decimal Round2(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
+
+    private static (decimal fis, decimal tec, decimal tat) PesosPorPosicao(string? posicao)
+    {
+        if (string.IsNullOrWhiteSpace(posicao)) return (0.30m, 0.45m, 0.25m);
+        var p = posicao.Trim().ToLowerInvariant();
+        if (p.Contains("goleiro") || p.Contains("goalkeeper")) return (0.45m, 0.25m, 0.30m);
+        if (p.Contains("zagueiro") || p.Contains("lateral") || p.Contains("def")) return (0.30m, 0.35m, 0.35m);
+        if (p.Contains("volante") || p.Contains("meia") || p.Contains("meio") || p.Contains("mid")) return (0.25m, 0.45m, 0.30m);
+        if (p.Contains("atacante") || p.Contains("ponta") || p.Contains("centroavante") || p.Contains("forward")) return (0.30m, 0.50m, 0.20m);
+        return (0.30m, 0.45m, 0.25m);
+    }
+
+    private static bool TryParseDecimal(string? s, out decimal val)
+    {
+        val = 0m;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim().Replace(" ", "");
+        if (decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out val)) return true;
+        return decimal.TryParse(s, System.Globalization.NumberStyles.Any, new System.Globalization.CultureInfo("pt-BR"), out val);
+    }
+
+    private static decimal? NormalizaFisico(string teste, string tipo, string resultado, string unidade)
+    {
+        if (!TryParseDecimal(resultado, out var val)) return null;
+        var t = (teste ?? string.Empty).Trim().ToLowerInvariant();
+        var u = (unidade ?? string.Empty).Trim().ToLowerInvariant();
+
+        decimal Clamp01(decimal x) => x < 0m ? 0m : (x > 1m ? 1m : x);
+        decimal ToPct(decimal v) => Math.Round(v * 100m, 4);
+
+        decimal LowerBetter(decimal min, decimal max, decimal v) => ToPct(Clamp01((max - v) / (max - min)));
+        decimal HigherBetter(decimal min, decimal max, decimal v) => ToPct(Clamp01((v - min) / (max - min)));
+
+        if (t.Contains("sprint") && u.Contains("s"))
+        {
+            if (t.Contains("30")) return LowerBetter(3.7m, 5.5m, val);
+            if (t.Contains("20")) return LowerBetter(2.8m, 4.0m, val);
+            if (t.Contains("10")) return LowerBetter(1.6m, 2.2m, val);
+            if (t.Contains("5"))  return LowerBetter(0.9m, 1.5m, val);
+        }
+        if (t.Contains("illinois") || t.Contains("teste t") || t.Contains("shuttle") || t.Contains("pro-agility"))
+        {
+            return LowerBetter(14.0m, 20.0m, val);
+        }
+        if (t.Contains("1600") && (u.Contains("min") || u.Contains("s")))
+        {
+            var sec = u.Contains("min") ? val * 60m : val;
+            return LowerBetter(270m, 420m, sec);
+        }
+        if (t.Contains("cooper") && u.Contains("m"))
+        {
+            return HigherBetter(1800m, 3000m, val);
+        }
+        if (t.Contains("velocidade máxima") || t.Contains("velocidade maxima") || (u.Contains("km/h") || u.Contains("kmh")))
+        {
+            return HigherBetter(24m, 36m, val);
+        }
+        if (t.Contains("cmj") || t.Contains("salto vertical") || (u.Contains("cm") && t.Contains("salto")))
+        {
+            return HigherBetter(30m, 70m, val);
+        }
+        if (t.Contains("plank") || t.Contains("prancha"))
+        {
+            return HigherBetter(60m, 240m, val);
+        }
+        if (t.Contains("abdominais") || t.Contains("flexões"))
+        {
+            return HigherBetter(20m, 70m, val);
+        }
+        if (t.Contains("medicine") || t.Contains("arremesso") || (u.Contains("m") && t.Contains("arremesso")))
+        {
+            return HigherBetter(3m, 8m, val);
+        }
+        return null;
+    }
+
 
 
     // Novo endpoint para o novo fluxo: cria avaliação para um jogador com dados normalizados
     [HttpPost("/api/jogadores/{jogadorId:int}/avaliacoes")]
     public async Task<ActionResult<Avaliacao>> CreateForJogador(int jogadorId, [FromBody] DadosAvaliacaoDto dto)
     {
-        // Valida jogador
-        var jogadorExists = await _db.Jogadores.AsNoTracking().AnyAsync(j => j.Id == jogadorId);
-        if (!jogadorExists) return NotFound(new { message = "Jogador não encontrado" });
-
-        // Obtém um avaliador padrão (ajuste futuro para pegar do usuário autenticado)
-        var avaliadorId = await _db.Usuarios.AsNoTracking().Select(u => u.Id).FirstOrDefaultAsync();
-        if (avaliadorId == 0) return BadRequest(new { message = "Nenhum usuário cadastrado para atribuir como avaliador" });
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        // Valida jogador do usuário
+        var jogadorOk = await _db.Jogadores.AsNoTracking().AnyAsync(j => j.Id == jogadorId && j.UsuarioId == uid);
+        if (!jogadorOk) return NotFound(new { message = "Jogador não encontrado" });
 
         var data = dto.DataAvaliacao.HasValue
             ? DateTime.SpecifyKind(dto.DataAvaliacao.Value, DateTimeKind.Utc)
@@ -103,11 +207,54 @@ public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbCon
         var entity = new Avaliacao
         {
             JogadorId = jogadorId,
-            AvaliadorId = avaliadorId,
+            AvaliadorId = uid.Value,
             Data = new DateTimeOffset(data),
             LocalAvaliacao = (dto.LocalAvaliacao ?? string.Empty).Trim(),
             Comentarios = (dto.ComentariosGerais ?? string.Empty).Trim()
         };
+
+        // Cálculo das notas parciais e final (antes de salvar)
+        var posicao = await _db.Jogadores.AsNoTracking()
+            .Where(j => j.Id == jogadorId && j.UsuarioId == uid)
+            .Select(j => j.Posicao)
+            .FirstOrDefaultAsync();
+
+        decimal fis100 = 0m, tec100 = 0m, tat100 = 0m;
+        if (dto.Fisica != null && dto.Fisica.Count > 0)
+        {
+            var xs = new List<decimal>();
+            foreach (var t in dto.Fisica)
+            {
+                var s = NormalizaFisico(t.Teste ?? string.Empty, t.TipoTeste ?? string.Empty, t.Resultado ?? string.Empty, t.Unidade ?? string.Empty);
+                if (s.HasValue) xs.Add(s.Value);
+            }
+            if (xs.Count > 0) fis100 = xs.Average();
+        }
+        if (dto.Tecnica != null && dto.Tecnica.Count > 0)
+        {
+            var xs = new List<decimal>();
+            foreach (var e in dto.Tecnica)
+            {
+                var tent = Math.Max(1, e.Tentativas);
+                xs.Add(((decimal)e.Acertos / tent) * 100m);
+            }
+            if (xs.Count > 0) tec100 = xs.Average();
+        }
+        var tatDtoVar = dto.TaticaComportamental;
+        if (tatDtoVar != null)
+        {
+            var xs = new List<decimal>();
+            if (tatDtoVar.Posicionamento.HasValue) xs.Add(tatDtoVar.Posicionamento.Value * 10m);
+            if (tatDtoVar.LeituraJogo.HasValue) xs.Add(tatDtoVar.LeituraJogo.Value * 10m);
+            if (tatDtoVar.TomadaDecisao.HasValue) xs.Add(tatDtoVar.TomadaDecisao.Value * 10m);
+            if (xs.Count > 0) tat100 = xs.Average();
+        }
+
+        var (wFis, wTec, wTat) = PesosPorPosicao(posicao);
+        entity.NotaFisica = Round2(fis100 / 10m);
+        entity.NotaTecnica = Round2(tec100 / 10m);
+        entity.NotaTaticaComportamental = Round2(tat100 / 10m);
+        entity.NotaFinal = Round2(((fis100 * wFis) + (tec100 * wTec) + (tat100 * wTat)) / 10m);
 
         _db.Avaliacoes.Add(entity);
         await _db.SaveChangesAsync();
@@ -170,7 +317,13 @@ public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbCon
     [HttpGet("{id:int}/detalhes")]
     public async Task<ActionResult<object>> GetDetalhes(int id)
     {
-        var a = await _db.Avaliacoes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        var a = await _db.Avaliacoes.AsNoTracking()
+            .Join(_db.Jogadores.AsNoTracking(), av => av.JogadorId, j => j.Id, (av, j) => new { av, j })
+            .Where(x => x.av.Id == id && x.j.UsuarioId == uid)
+            .Select(x => x.av)
+            .FirstOrDefaultAsync();
         if (a == null) return NotFound();
 
         var fis = await _db.AvaliacoesFisicas.AsNoTracking()

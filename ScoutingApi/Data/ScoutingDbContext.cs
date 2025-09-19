@@ -43,11 +43,18 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
             e.ToTable("clubes");
             e.HasKey(x => x.Id);
             e.Property(x => x.Nome).HasColumnName("nome").HasMaxLength(100).IsRequired();
-            e.HasIndex(x => x.Nome).IsUnique();
             e.Property(x => x.Cidade).HasColumnName("cidade").HasMaxLength(100);
             e.Property(x => x.Estado).HasColumnName("estado").HasMaxLength(50);
             e.Property(x => x.Pais).HasColumnName("pais").HasMaxLength(50);
             e.Property(x => x.Foto).HasColumnName("foto").HasMaxLength(255);
+
+            // Escopo por usuário
+            e.Property(x => x.UsuarioId).HasColumnName("usuario_id").IsRequired();
+            e.HasIndex(x => new { x.UsuarioId, x.Nome }).IsUnique();
+            e.HasOne<Usuario>()
+             .WithMany()
+             .HasForeignKey(x => x.UsuarioId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Jogador>(e =>
@@ -69,6 +76,14 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
              .WithMany()
              .HasForeignKey(x => x.ClubeAtualId)
              .OnDelete(DeleteBehavior.SetNull);
+
+            // Escopo por usuário
+            e.Property(x => x.UsuarioId).HasColumnName("usuario_id").IsRequired();
+            e.HasIndex(x => x.UsuarioId);
+            e.HasOne<Usuario>()
+             .WithMany()
+             .HasForeignKey(x => x.UsuarioId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<HistoricoClube>(e =>
@@ -99,8 +114,11 @@ public class ScoutingDbContext(DbContextOptions<ScoutingDbContext> options) : Db
             e.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
             e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
-            // Nota final agregada (0-10)
+            // Notas agregadas (0-10)
             e.Property(x => x.NotaFinal).HasColumnName("nota_final").HasPrecision(4, 2);
+            e.Property(x => x.NotaFisica).HasColumnName("nota_fisica").HasPrecision(4, 2);
+            e.Property(x => x.NotaTecnica).HasColumnName("nota_tecnica").HasPrecision(4, 2);
+            e.Property(x => x.NotaTaticaComportamental).HasColumnName("nota_tatica_comportamental").HasPrecision(4, 2);
 
             e.HasOne(x => x.Jogador).WithMany(x => x.Avaliacoes).HasForeignKey(x => x.JogadorId);
             e.HasOne(x => x.Avaliador).WithMany().HasForeignKey(x => x.AvaliadorId);

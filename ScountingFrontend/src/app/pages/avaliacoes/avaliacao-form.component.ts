@@ -6,11 +6,12 @@ import { AvaliacoesService } from '../../services/avaliacoes.service';
 
 import { JogadoresService } from '../../services/jogadores.service';
 import type { Jogador } from '../../models/player';
+import { BlocoInformativoComponent } from '../../components/bloco-informativo.component';
 
 @Component({
   standalone: true,
   selector: 'app-avaliacao-form',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, BlocoInformativoComponent],
   template: `
   <div class="container">
     <div class="card shadow-sm sticky-top mb-3" style="top: 0; z-index: 1020;">
@@ -63,6 +64,9 @@ import type { Jogador } from '../../models/player';
               <textarea class="form-control" rows="3" [(ngModel)]="form.dados_avaliacao.comentarios_gerais" name="dados_avaliacao_comentarios" placeholder="Observações gerais, comportamentais, cabeçalho/movimentação/versatilidade, composição corporal, etc."></textarea>
             </div>
           </div>
+          <div class="mt-3">
+            <app-bloco-informativo [title]="'Como a Nota Final é Calculada?'" [content]="'A Nota Final (0-10) é uma média ponderada que reflete a importância de cada área para a posição do jogador.\nFórmula: Nota Final = ((Nota Física * Peso%) + (Nota Técnica * Peso%) + (Nota Tática * Peso%)) / 10\nOs pesos (%) variam para cada posição (Atacante, Zagueiro, etc.) para garantir uma avaliação justa.'" storageKey="bloco-nota-final"></app-bloco-informativo>
+          </div>
           <div class="alert alert-light border mt-3 d-flex align-items-center justify-content-between">
             <div>
               <div class="small text-muted">Nota Final (atualiza automaticamente)</div>
@@ -79,6 +83,9 @@ import type { Jogador } from '../../models/player';
         <!-- FISICA -->
         <div [hidden]="tab!=='fis'">
           <div class="row g-3">
+            <div class="col-12">
+              <app-bloco-informativo [title]="'Como a Nota Física é Calculada?'" [content]="'A nota é a média de todos os testes, convertidos para uma escala de 0-100 e depois ajustados para 0-10.\n\nPara tempos (menor é melhor): Nota(0-100) = 100 * (1 - (Resultado - Ótimo) / (Ruim - Ótimo))\n\nPara pontuações (maior é melhor): Nota(0-100) = 100 * ((Resultado - Ruim) / (Ótimo - Ruim))\nA Nota Física (0-10) final é a média de todas essas notas, dividida por 10.'" storageKey="bloco-nota-fisica"></app-bloco-informativo>
+            </div>
             <div class="col-12 d-flex align-items-center justify-content-between mt-2">
               <div class="fw-semibold">Testes Físicos Realizados</div>
               <button type="button" class="btn btn-sm btn-success" (click)="addTesteFisico()">[+ Adicionar Teste Físico]</button>
@@ -123,6 +130,9 @@ import type { Jogador } from '../../models/player';
         <!-- TECNICA -->
         <div [hidden]="tab!=='tec'">
           <div class="row g-3">
+            <div class="col-12">
+              <app-bloco-informativo [title]="'Como a Nota Técnica é Calculada?'" [content]="'A nota de cada exercício é baseada na sua porcentagem de acerto. A nota final da área é a média de todos os exercícios.\n\nFórmula por exercício: Nota(0-100) = (Acertos / Tentativas) * 100\nA Nota Técnica (0-10) final é a média de todas as notas dos exercícios, dividida por 10.'" storageKey="bloco-nota-tecnica"></app-bloco-informativo>
+            </div>
             <div class="col-12 d-flex align-items-center justify-content-between mt-2">
               <div class="fw-semibold">Exercícios Técnicos Realizados</div>
               <button type="button" class="btn btn-sm btn-success" (click)="addExercicioTecnico()">[+ Adicionar Exercício Técnico]</button>
@@ -171,12 +181,15 @@ import type { Jogador } from '../../models/player';
         <!-- TATICA & COMPORTAMENTAL -->
         <div [hidden]="tab!=='tat'">
           <div class="row g-3">
+            <div class="col-12">
+              <app-bloco-informativo [title]="'Como a Nota Tática/Comport. é Calculada?'" [content]="'A nota de cada atributo é convertida para a escala de 0-100. A nota final da área é a média de todos os atributos.\n\nFórmula por atributo: Nota(0-100) = Nota do Slider * 10\nA Nota Tática (0-10) final é a média de todas as notas dos sliders, dividida por 10'" storageKey="bloco-nota-tatica"></app-bloco-informativo>
+            </div>
             <!-- Posicionamento -->
             <div class="col-12">
               <div class="row align-items-center g-2">
                 <div class="col-12 col-md-4"><label class="form-label m-0">Posicionamento</label></div>
                 <div class="col">
-                  <input type="range" class="form-range" min="1" max="10" step="1"
+                  <input type="range" class="form-range" min="0" max="10" step="1"
                          [(ngModel)]="form.dados_avaliacao.tatica_comportamental.posicionamento" name="tat_posicionamento">
                 </div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ form.dados_avaliacao?.tatica_comportamental?.posicionamento || 0 }}/10</span></div>
@@ -187,7 +200,7 @@ import type { Jogador } from '../../models/player';
               <div class="row align-items-center g-2">
                 <div class="col-12 col-md-4"><label class="form-label m-0">Leitura de Jogo</label></div>
                 <div class="col">
-                  <input type="range" class="form-range" min="1" max="10" step="1"
+                  <input type="range" class="form-range" min="0" max="10" step="1"
                          [(ngModel)]="form.dados_avaliacao.tatica_comportamental.leitura_jogo" name="tat_leitura_jogo">
                 </div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ form.dados_avaliacao?.tatica_comportamental?.leitura_jogo || 0 }}/10</span></div>
@@ -198,7 +211,7 @@ import type { Jogador } from '../../models/player';
               <div class="row align-items-center g-2">
                 <div class="col-12 col-md-4"><label class="form-label m-0">Tomada de Decisão</label></div>
                 <div class="col">
-                  <input type="range" class="form-range" min="1" max="10" step="1"
+                  <input type="range" class="form-range" min="0" max="10" step="1"
                          [(ngModel)]="form.dados_avaliacao.tatica_comportamental.tomada_decisao" name="tat_tomada_decisao">
                 </div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ form.dados_avaliacao?.tatica_comportamental?.tomada_decisao || 0 }}/10</span></div>
@@ -268,9 +281,9 @@ export class AvaliacaoFormComponent {
       fisica: [] as any[],
       tecnica: [] as any[],
       tatica_comportamental: {
-        posicionamento: null,
-        leitura_jogo: null,
-        tomada_decisao: null
+        posicionamento: 0,
+        leitura_jogo: 0,
+        tomada_decisao: 0
       }
     },
 

@@ -41,11 +41,21 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     }
 
 
+    private int? GetUserIdFromHeader()
+    {
+        var h = Request.Headers["X-User-Id"].FirstOrDefault();
+        if (int.TryParse(h, out var id)) return id;
+        return null;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Jogador>>> GetAll()
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
         var list = await _db.Jogadores
             .AsNoTracking()
+            .Where(j => j.UsuarioId == uid)
             .Include(j => j.ClubeAtual)
             .ToListAsync();
         return Ok(list);
@@ -54,24 +64,34 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<Jogador>> GetById(int id)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
         var entity = await _db.Jogadores
             .Include(j => j.ClubeAtual)
-            .FirstOrDefaultAsync(j => j.Id == id);
+            .FirstOrDefaultAsync(j => j.Id == id && j.UsuarioId == uid);
         return entity is null ? NotFound() : Ok(entity);
     }
 
     [HttpPost]
     public async Task<ActionResult<Jogador>> Create(Jogador entity)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        entity.UsuarioId = uid.Value;
+        // Validar clube atual pertence ao usuário (se informado)
+        if (entity.ClubeAtualId.HasValue)
+        {
+            var clubOk = await _db.Clubes.AsNoTracking()
+                .AnyAsync(c => c.Id == entity.ClubeAtualId && c.UsuarioId == uid);
+            if (!clubOk) return BadRequest(new { message = "Clube atual inválido para este usuário." });
+        }
         // Normaliza altura/peso
         if (entity.Altura.HasValue)
         {
             if (entity.Altura.Value >= 10 && entity.Altura.Value <= 300) // cm informado
                 entity.Altura = Math.Round(entity.Altura.Value / 100M, 2);
-            if (entity.Altura.Value > 9.99M)
-                entity.Altura = 9.99M;
-            if (entity.Altura.Value < 0)
-                entity.Altura = 0;
+            if (entity.Altura.Value > 9.99M) entity.Altura = 9.99M;
+            if (entity.Altura.Value < 0) entity.Altura = 0;
         }
         if (entity.Peso.HasValue)
         {
@@ -86,18 +106,27 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, Jogador entity)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        var current = await _db.Jogadores.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id && j.UsuarioId == uid);
+        if (current is null) return NotFound();
+        var oldFoto = current.Foto;
+
         entity.Id = id;
-        var current = await _db.Jogadores.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id);
-        var oldFoto = current?.Foto;
+        entity.UsuarioId = uid.Value;
+        // Validar clube atual pertence ao usuário (se informado)
+        if (entity.ClubeAtualId.HasValue)
+        {
+            var clubOk = await _db.Clubes.AsNoTracking()
+                .AnyAsync(c => c.Id == entity.ClubeAtualId && c.UsuarioId == uid);
+            if (!clubOk) return BadRequest(new { message = "Clube atual inválido para este usuário." });
+        }
         // Normaliza altura/peso como no Create
         if (entity.Altura.HasValue)
         {
-            if (entity.Altura.Value >= 10 && entity.Altura.Value <= 300) // cm informado
-                entity.Altura = Math.Round(entity.Altura.Value / 100M, 2);
-            if (entity.Altura.Value > 9.99M)
-                entity.Altura = 9.99M;
-            if (entity.Altura.Value < 0)
-                entity.Altura = 0;
+            if (entity.Altura.Value >= 10 && entity.Altura.Value <= 300) entity.Altura = Math.Round(entity.Altura.Value / 100M, 2);
+            if (entity.Altura.Value > 9.99M) entity.Altura = 9.99M;
+            if (entity.Altura.Value < 0) entity.Altura = 0;
         }
         if (entity.Peso.HasValue)
         {
@@ -117,7 +146,9 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var entity = await _db.Jogadores.FindAsync(id);
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        var entity = await _db.Jogadores.FirstOrDefaultAsync(j => j.Id == id && j.UsuarioId == uid);
         if (entity is null) return NotFound();
         var oldFoto = entity.Foto;
         _db.Remove(entity);
@@ -131,7 +162,10 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpGet("{id:int}/favorito")]
     public async Task<ActionResult<object>> IsFavorito(int id, [FromQuery] int userId)
     {
-        var exists = await _db.JogadoresFavoritos.AsNoTracking().AnyAsync(f => f.JogadorId == id && f.UsuarioId == userId);
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        if (uid.Value != userId) return Forbid();
+        var exists = await _db.JogadoresFavoritos.AsNoTracking().AnyAsync(f => f.JogadorId == id && f.UsuarioId == uid);
         return Ok(new { favorite = exists });
     }
 
@@ -139,10 +173,16 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpPost("{id:int}/favoritar")]
     public async Task<ActionResult<object>> ToggleFavorito(int id, [FromQuery] int userId)
     {
-        var fav = await _db.JogadoresFavoritos.FindAsync(userId, id);
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        if (uid.Value != userId) return Forbid();
+        // Jogador deve pertencer ao usuário logado
+        var jogadorOk = await _db.Jogadores.AsNoTracking().AnyAsync(j => j.Id == id && j.UsuarioId == uid);
+        if (!jogadorOk) return NotFound();
+        var fav = await _db.JogadoresFavoritos.FindAsync(uid, id);
         if (fav is null)
         {
-            _db.JogadoresFavoritos.Add(new JogadorFavorito { UsuarioId = userId, JogadorId = id });
+            _db.JogadoresFavoritos.Add(new JogadorFavorito { UsuarioId = uid.Value, JogadorId = id });
             await _db.SaveChangesAsync();
             return Ok(new { favorite = true });
         }
@@ -158,13 +198,16 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
     [HttpGet("favoritos")]
     public async Task<ActionResult<IEnumerable<Jogador>>> Favoritos([FromQuery] int userId)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        if (uid.Value != userId) return Forbid();
         var list = await _db.JogadoresFavoritos.AsNoTracking()
-            .Where(f => f.UsuarioId == userId)
+            .Where(f => f.UsuarioId == uid)
             .Select(f => f.JogadorId)
             .ToListAsync();
         var jogadores = await _db.Jogadores.AsNoTracking()
             .Include(j => j.ClubeAtual)
-            .Where(j => list.Contains(j.Id))
+            .Where(j => list.Contains(j.Id) && j.UsuarioId == uid)
             .ToListAsync();
         return Ok(jogadores);
     }

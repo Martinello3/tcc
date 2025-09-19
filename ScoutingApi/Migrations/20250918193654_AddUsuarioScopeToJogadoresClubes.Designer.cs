@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ScoutingApi.Data;
@@ -11,9 +12,11 @@ using ScoutingApi.Data;
 namespace ScoutingApi.Migrations
 {
     [DbContext(typeof(ScoutingDbContext))]
-    partial class ScoutingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250918193654_AddUsuarioScopeToJogadoresClubes")]
+    partial class AddUsuarioScopeToJogadoresClubes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,21 +64,6 @@ namespace ScoutingApi.Migrations
                         .HasPrecision(4, 2)
                         .HasColumnType("numeric(4,2)")
                         .HasColumnName("nota_final");
-
-                    b.Property<decimal?>("NotaFisica")
-                        .HasPrecision(4, 2)
-                        .HasColumnType("numeric(4,2)")
-                        .HasColumnName("nota_fisica");
-
-                    b.Property<decimal?>("NotaTaticaComportamental")
-                        .HasPrecision(4, 2)
-                        .HasColumnType("numeric(4,2)")
-                        .HasColumnName("nota_tatica_comportamental");
-
-                    b.Property<decimal?>("NotaTecnica")
-                        .HasPrecision(4, 2)
-                        .HasColumnType("numeric(4,2)")
-                        .HasColumnName("nota_tecnica");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

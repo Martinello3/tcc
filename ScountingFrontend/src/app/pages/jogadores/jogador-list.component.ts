@@ -198,7 +198,6 @@ export class JogadorListComponent implements OnInit {
   // Estado de favoritos
   favoriteIds = signal<Set<number>>(new Set<number>());
   private userId: number | null = null;
-
   onFlagError(id: number) { this.flagBroken.add(id); }
 
   private dialog = inject(DialogService);

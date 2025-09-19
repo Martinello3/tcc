@@ -11,6 +11,32 @@ public class ClubesController : CrudBase<ScoutingDbContext, Clube>
     public ClubesController(ScoutingDbContext db) : base(db) { _db = db; }
 
 
+    private int? GetUserIdFromHeader()
+    {
+        var h = Request.Headers["X-User-Id"].FirstOrDefault();
+        if (int.TryParse(h, out var id)) return id;
+        return null;
+    }
+
+    [HttpGet]
+    public override async Task<ActionResult<IEnumerable<Clube>>> GetAll()
+    {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        var list = await _db.Clubes.AsNoTracking().Where(c => c.UsuarioId == uid).ToListAsync();
+        return Ok(list);
+    }
+
+    [HttpGet("{id:int}")]
+    public override async Task<ActionResult<Clube>> GetById(int id)
+    {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        var entity = await _db.Clubes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id && c.UsuarioId == uid);
+        return entity is null ? NotFound() : Ok(entity);
+    }
+
+
     private static string? ToAbsolutePathIfLocal(string? maybeRelative)
     {
         if (string.IsNullOrWhiteSpace(maybeRelative)) return null;
@@ -42,42 +68,56 @@ public class ClubesController : CrudBase<ScoutingDbContext, Clube>
     [HttpPost]
     public override async Task<ActionResult<Clube>> Create(Clube entity)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
         var nome = (entity.Nome ?? string.Empty).Trim();
-        if (await _db.Clubes.AnyAsync(c => c.Nome.ToLower() == nome.ToLower()))
-            return Conflict(new { message = "Já existe um clube com este nome." });
+        var exists = await _db.Clubes.AnyAsync(c => c.UsuarioId == uid && c.Nome.ToLower() == nome.ToLower());
+        if (exists) return Conflict(new { message = "Já existe um clube com este nome." });
         entity.Nome = nome;
-        return await base.Create(entity);
+        entity.UsuarioId = uid.Value;
+        _db.Clubes.Add(entity);
+        await _db.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
     }
 
     [HttpPut("{id:int}")]
     public override async Task<IActionResult> Update(int id, Clube entity)
     {
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
         var nome = (entity.Nome ?? string.Empty).Trim();
-        if (await _db.Clubes.AnyAsync(c => c.Id != id && c.Nome.ToLower() == nome.ToLower()))
-            return Conflict(new { message = "Já existe um clube com este nome." });
+        var exists = await _db.Clubes.AnyAsync(c => c.UsuarioId == uid && c.Id != id && c.Nome.ToLower() == nome.ToLower());
+        if (exists) return Conflict(new { message = "Já existe um clube com este nome." });
+        var current = await _db.Clubes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id && c.UsuarioId == uid);
+        if (current is null) return NotFound();
+        var oldFoto = current.Foto;
+        entity.Id = id;
         entity.Nome = nome;
-        var current = await _db.Clubes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
-        var oldFoto = current?.Foto;
-        var result = await base.Update(id, entity);
-        if (result is NoContentResult && !string.IsNullOrWhiteSpace(oldFoto) && !string.Equals(oldFoto, entity.Foto, StringComparison.OrdinalIgnoreCase))
+        entity.UsuarioId = uid.Value;
+        _db.Entry(entity).State = EntityState.Modified;
+        await _db.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(oldFoto) && !string.Equals(oldFoto, entity.Foto, StringComparison.OrdinalIgnoreCase))
         {
             TryDeleteLocalFile(oldFoto);
         }
-        return result;
+        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
     public override async Task<IActionResult> Delete(int id)
     {
-        var current = await _db.Clubes.FindAsync(id);
+        var uid = GetUserIdFromHeader();
+        if (uid is null) return Unauthorized();
+        var current = await _db.Clubes.FirstOrDefaultAsync(c => c.Id == id && c.UsuarioId == uid);
         if (current is null) return NotFound();
         var oldFoto = current.Foto;
-        var result = await base.Delete(id);
-        if (result is NoContentResult && !string.IsNullOrWhiteSpace(oldFoto))
+        _db.Clubes.Remove(current);
+        await _db.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(oldFoto))
         {
             TryDeleteLocalFile(oldFoto);
         }
-        return result;
+        return NoContent();
     }
 }
 

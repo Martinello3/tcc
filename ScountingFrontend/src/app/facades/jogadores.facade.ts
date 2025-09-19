@@ -14,7 +14,9 @@ export class JogadoresFacade {
   readonly loading = signal(false);
   readonly removingId = signal<number | null>(null);
 
+  // Busca por nome (já existente)
   readonly filter = signal('');
+
   readonly sortKey = signal<keyof Jogador>('nome');
   readonly sortDir = signal<SortDir>('asc');
   readonly page = signal(1);
@@ -49,11 +51,12 @@ export class JogadoresFacade {
 
   load() {
     this.loading.set(true);
-    this.api.list().subscribe({
-      next: (res) => this.items.set(res),
-      error: () => {},
-      complete: () => this.loading.set(false)
-    });
+    this.api.list()
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (res) => this.items.set(res),
+        error: () => this.items.set([])
+      });
   }
 
   setFilter(value: string) {
