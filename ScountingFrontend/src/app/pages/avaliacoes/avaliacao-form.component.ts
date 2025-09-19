@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AvaliacoesService } from '../../services/avaliacoes.service';
+import { AvaliacaoCalculoService } from '../../services/avaliacao-calculo.service';
 
 import { JogadoresService } from '../../services/jogadores.service';
 import type { Jogador } from '../../models/player';
@@ -73,9 +74,9 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
               <div class="display-6 m-0">{{ notaFinal() | number:'1.0-2' }}</div>
             </div>
             <div class="text-end small">
+              <div><strong>Física:</strong> {{ scoreFisica() | number:'1.0-2' }}</div>
               <div><strong>Técnica:</strong> {{ scoreTecnica() | number:'1.0-2' }}</div>
               <div><strong>Tática:</strong> {{ scoreTatica() | number:'1.0-2' }}</div>
-              <div><strong>Psico:</strong> {{ scorePsico() | number:'1.0-2' }}</div>
             </div>
           </div>
         </div>
@@ -95,7 +96,7 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
               <div class="row g-2 align-items-end">
                 <div class="col-12 col-md-3">
                   <label class="form-label">Tipo de Teste</label>
-                  <select class="form-select" [(ngModel)]="t.tipo_teste" name="tipoTeste_{{i}}" (ngModelChange)="onTipoTesteChange(i)" [class.is-invalid]="validation.fisica[i]?.tipo_teste">
+                  <select class="form-select" [(ngModel)]="t.tipo_teste" name="tipoTeste_{{i}}" (ngModelChange)="onTipoTesteChange(i); recompute()" [class.is-invalid]="validation.fisica[i]?.tipo_teste">
                     <option value="">Selecione...</option>
                     <option *ngFor="let k of fisicaTipos" [value]="k">{{ k }}</option>
                   </select>
@@ -103,7 +104,7 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
                 </div>
                 <div class="col-12 col-md-4">
                   <label class="form-label">Teste</label>
-                  <select class="form-select" [(ngModel)]="t.teste" name="testeNome_{{i}}" (ngModelChange)="onTesteChange(i)" [disabled]="!t.tipo_teste" [class.is-invalid]="validation.fisica[i]?.teste">
+                  <select class="form-select" [(ngModel)]="t.teste" name="testeNome_{{i}}" (ngModelChange)="onTesteChange(i); recompute()" [disabled]="!t.tipo_teste" [class.is-invalid]="validation.fisica[i]?.teste">
                     <option value="">Selecione...</option>
                     <option *ngFor="let opt of testesPorTipo(t.tipo_teste)" [value]="opt.nome">{{ opt.nome }}</option>
                   </select>
@@ -111,12 +112,12 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
                 </div>
                 <div class="col-6 col-md-2">
                   <label class="form-label">Resultado</label>
-                  <input type="text" class="form-control" [(ngModel)]="t.resultado" name="testeResultado_{{i}}" [disabled]="!t.teste" [class.is-invalid]="validation.fisica[i]?.resultado">
+                  <input type="text" class="form-control" [(ngModel)]="t.resultado" name="testeResultado_{{i}}" (ngModelChange)="recompute()" [disabled]="!t.teste" [class.is-invalid]="validation.fisica[i]?.resultado">
                   <div class="invalid-feedback">Informe o resultado.</div>
                 </div>
                 <div class="col-6 col-md-2">
                   <label class="form-label">Unidade</label>
-                  <input type="text" class="form-control" [(ngModel)]="t.unidade" name="testeUnidade_{{i}}" [disabled]="true" [class.is-invalid]="validation.fisica[i]?.unidade">
+                  <input type="text" class="form-control" [(ngModel)]="t.unidade" name="testeUnidade_{{i}}" (ngModelChange)="recompute()" [disabled]="true" [class.is-invalid]="validation.fisica[i]?.unidade">
                   <div class="invalid-feedback">Informe a unidade.</div>
                 </div>
                 <div class="col-12 col-md-1 text-end">
@@ -158,12 +159,12 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
                 </div>
                 <div class="col-6 col-md-2">
                   <label class="form-label">Acertos</label>
-                  <input type="number" class="form-control" min="0" [(ngModel)]="e.acertos" name="tecAcertos_{{i}}" [disabled]="!e.exercicio" [class.is-invalid]="validation.tecnica[i]?.acertos">
+                  <input type="number" class="form-control" min="0" [(ngModel)]="e.acertos" name="tecAcertos_{{i}}" (ngModelChange)="recompute()" [disabled]="!e.exercicio" [class.is-invalid]="validation.tecnica[i]?.acertos">
                   <div class="invalid-feedback">Informe os acertos.</div>
                 </div>
                 <div class="col-6 col-md-2">
                   <label class="form-label">Tentativas</label>
-                  <input type="number" class="form-control" min="0" [(ngModel)]="e.tentativas" name="tecTentativas_{{i}}" [disabled]="!e.exercicio" [class.is-invalid]="validation.tecnica[i]?.tentativas">
+                  <input type="number" class="form-control" min="0" [(ngModel)]="e.tentativas" name="tecTentativas_{{i}}" (ngModelChange)="recompute()" [disabled]="!e.exercicio" [class.is-invalid]="validation.tecnica[i]?.tentativas">
                   <div class="invalid-feedback">Informe as tentativas.</div>
                 </div>
                 <div class="col-12 col-md-1 text-end">
@@ -190,7 +191,7 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
                 <div class="col-12 col-md-4"><label class="form-label m-0">Posicionamento</label></div>
                 <div class="col">
                   <input type="range" class="form-range" min="0" max="10" step="1"
-                         [(ngModel)]="form.dados_avaliacao.tatica_comportamental.posicionamento" name="tat_posicionamento">
+                         [(ngModel)]="form.dados_avaliacao.tatica_comportamental.posicionamento" (ngModelChange)="recompute()" name="tat_posicionamento">
                 </div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ form.dados_avaliacao?.tatica_comportamental?.posicionamento || 0 }}/10</span></div>
               </div>
@@ -201,7 +202,7 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
                 <div class="col-12 col-md-4"><label class="form-label m-0">Leitura de Jogo</label></div>
                 <div class="col">
                   <input type="range" class="form-range" min="0" max="10" step="1"
-                         [(ngModel)]="form.dados_avaliacao.tatica_comportamental.leitura_jogo" name="tat_leitura_jogo">
+                         [(ngModel)]="form.dados_avaliacao.tatica_comportamental.leitura_jogo" (ngModelChange)="recompute()" name="tat_leitura_jogo">
                 </div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ form.dados_avaliacao?.tatica_comportamental?.leitura_jogo || 0 }}/10</span></div>
               </div>
@@ -212,7 +213,7 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
                 <div class="col-12 col-md-4"><label class="form-label m-0">Tomada de Decisão</label></div>
                 <div class="col">
                   <input type="range" class="form-range" min="0" max="10" step="1"
-                         [(ngModel)]="form.dados_avaliacao.tatica_comportamental.tomada_decisao" name="tat_tomada_decisao">
+                         [(ngModel)]="form.dados_avaliacao.tatica_comportamental.tomada_decisao" (ngModelChange)="recompute()" name="tat_tomada_decisao">
                 </div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ form.dados_avaliacao?.tatica_comportamental?.tomada_decisao || 0 }}/10</span></div>
               </div>
@@ -242,6 +243,7 @@ export class AvaliacaoFormComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private svc = inject(AvaliacoesService);
+  private calc = inject(AvaliacaoCalculoService);
 
   private jogadoresSvc = inject(JogadoresService);
 
@@ -257,8 +259,15 @@ export class AvaliacaoFormComponent {
 
   constructor() {
     if (this.jogadorId) {
-      this.jogadoresSvc.get(this.jogadorId).subscribe({ next: j => this.jogador.set(j) });
+      this.jogadoresSvc.get(this.jogadorId).subscribe({ next: j => { this.jogador.set(j); this.recompute(); } });
     }
+    // recompute once on init with default values
+    this.recompute();
+  }
+
+  // dispara reclculo dos escores em tempo real
+  recompute() {
+    this.calc.recompute(this.form, this.jogador()?.posicao || null);
   }
 
   imgSrc(val?: string | null): string | null {
@@ -304,23 +313,13 @@ export class AvaliacaoFormComponent {
     return sum / nums.length;
   };
 
-  scoreTecnica = computed(() => 0);
-  scoreTatica = computed(() => this.avg([
-    this.form.dados_avaliacao?.tatica_comportamental?.posicionamento,
-    this.form.dados_avaliacao?.tatica_comportamental?.leitura_jogo,
-    this.form.dados_avaliacao?.tatica_comportamental?.tomada_decisao
-  ]));
-  scoreFisica = computed(() => 0);
+  // Scores reativos via serviço de cálculo (0..10)
+  scoreTecnica = computed(() => this.calc.notaTecnica());
+  scoreTatica = computed(() => this.calc.notaTatica());
+  scoreFisica = computed(() => this.calc.notaFisica());
   scorePsico = computed(() => this.avg([this.form.disciplina, this.form.lideranca, this.form.proatividade, this.form.inteligenciaEmocional]));
 
-  notaFinal = computed(() => {
-    const t = this.scoreTecnica();
-    const ta = this.scoreTatica();
-    const f = this.scoreFisica();
-    const p = this.scorePsico();
-    const nota = t * 0.35 + ta * 0.25 + f * 0.25 + p * 0.15;
-    return Math.round(nota * 100) / 100;
-  });
+  notaFinal = computed(() => this.calc.notaFinal());
 
   canSubmit = computed(() => {
     const v = this.form;
@@ -337,9 +336,11 @@ export class AvaliacaoFormComponent {
     if (!Array.isArray(this.form.dados_avaliacao.fisica)) this.form.dados_avaliacao.fisica = [];
     const id = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     this.form.dados_avaliacao.fisica.push({ id_temp: id, tipo_teste: '', teste: '', resultado: '', unidade: '' });
+    this.recompute();
   }
   removeTesteFisico(i: number) {
     if (Array.isArray(this.form.dados_avaliacao?.fisica)) this.form.dados_avaliacao.fisica.splice(i, 1);
+    this.recompute();
   }
 
   addExercicioTecnico() {
@@ -347,9 +348,11 @@ export class AvaliacaoFormComponent {
     if (!Array.isArray(this.form.dados_avaliacao.tecnica)) this.form.dados_avaliacao.tecnica = [];
     const id = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     this.form.dados_avaliacao.tecnica.push({ id_temp: id, tipo_exercicio: '', exercicio: '', acertos: null, tentativas: null, observacoes: '' });
+    this.recompute();
   }
   removeExercicioTecnico(i: number) {
     if (Array.isArray(this.form.dados_avaliacao?.tecnica)) this.form.dados_avaliacao.tecnica.splice(i, 1);
+    this.recompute();
   }
 
   // Catálogo de testes físicos por categoria
@@ -401,6 +404,7 @@ export class AvaliacaoFormComponent {
     t.teste = '';
     t.resultado = '';
     t.unidade = '';
+    this.recompute();
   }
 
   onTesteChange(i: number) {
@@ -409,6 +413,7 @@ export class AvaliacaoFormComponent {
     const opts = this.testesPorTipo(t.tipo_teste);
     const found = opts.find((o: any) => o.nome === t.teste);
     t.unidade = found?.unidade_padrao || '';
+    this.recompute();
   }
 
   // Catálogo de exercícios técnicos por categoria
@@ -462,12 +467,14 @@ export class AvaliacaoFormComponent {
     e.acertos = null as any;
     e.tentativas = null as any;
     e.observacoes = '';
+    this.recompute();
   }
 
   onExercicioTecnicoChange(i: number) {
     // Mantemos para eventuais resets futuros; atualmente apenas garante a habilitação dos campos.
     const e = this.form.dados_avaliacao?.tecnica?.[i];
     if (!e) return;
+    this.recompute();
   }
 
 

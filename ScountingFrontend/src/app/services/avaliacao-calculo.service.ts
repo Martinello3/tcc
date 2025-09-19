@@ -77,42 +77,98 @@ export class AvaliacaoCalculoService {
     const t = (teste || '').toLowerCase();
     const u = (unidade || '').toLowerCase();
 
+    // helpers
     const clamp01 = (x: number) => x < 0 ? 0 : (x > 1 ? 1 : x);
     const toPct = (v: number) => Math.round(v * 100 * 10000) / 10000;
-    const lowerBetter = (min: number, max: number, v: number) => toPct(clamp01((max - v) / (max - min)));
-    const higherBetter = (min: number, max: number, v: number) => toPct(clamp01((v - min) / (max - min)));
+    const lowerBetter = (optimal: number, poor: number, v: number) => toPct(clamp01((poor - v) / (poor - optimal))); // lower is better
+    const higherBetter = (poor: number, optimal: number, v: number) => toPct(clamp01((v - poor) / (optimal - poor))); // higher is better
+    const has = (s: string, ks: string[]) => ks.some(k => s.includes(k));
 
+    // -----------------------------
+    // SPEED (lower is better)
+    // -----------------------------
     if (t.includes('sprint') && u.includes('s')) {
       if (t.includes('30')) return lowerBetter(3.7, 5.5, val);
       if (t.includes('20')) return lowerBetter(2.8, 4.0, val);
       if (t.includes('10')) return lowerBetter(1.6, 2.2, val);
       if (t.includes('5'))  return lowerBetter(0.9, 1.5, val);
     }
-    if (t.includes('illinois') || t.includes('teste t') || t.includes('shuttle') || t.includes('pro-agility')) {
+    if (t.includes('rast')) {
+      return lowerBetter(5.0, 6.5, val);
+    }
+
+    // -----------------------------
+    // AGILITY (lower is better)
+    // -----------------------------
+    if (t.includes('teste t') || has(t, ['t test', 't-teste'])) {
       return lowerBetter(14.0, 20.0, val);
+    }
+    if (t.includes('illinois')) {
+      return lowerBetter(14.0, 20.0, val);
+    }
+    if (has(t, ['shuttle', 'pro-agility', '5-10-5', '5 10 5'])) {
+      return lowerBetter(4.2, 5.5, val);
+    }
+    if (has(t, ['zigue', 'zig-zag', 'zigzag'])) {
+      return lowerBetter(12.0, 18.0, val);
+    }
+
+    // -----------------------------
+    // RESISTANCE
+    // -----------------------------
+    if (has(t, ['yo-yo', 'yoyo']) && (t.includes('ir1') || t.includes('ir 1'))) {
+      return higherBetter(15.0, 21.0, val);
+    }
+    if (has(t, ['yo-yo', 'yoyo']) && (t.includes('ir2') || t.includes('ir 2'))) {
+      return higherBetter(18.0, 25.0, val);
+    }
+    if (t.includes('cooper') && u.includes('m')) {
+      return higherBetter(1800, 3000, val);
+    }
+    if (has(t, ['t-car', 'navete', 'tcar'])) {
+      return higherBetter(40, 80, val);
     }
     if (t.includes('1600') && (u.includes('min') || u.includes('s'))) {
       const sec = u.includes('min') ? val * 60 : val;
       return lowerBetter(270, 420, sec);
     }
-    if (t.includes('cooper') && u.includes('m')) {
-      return higherBetter(1800, 3000, val);
-    }
-    if (t.includes('velocidade máxima') || t.includes('velocidade maxima') || (u.includes('km/h') || u.includes('kmh'))) {
+
+    // -----------------------------
+    // SPEED TOP END / GPS (higher better)
+    // -----------------------------
+    if (has(t, ['velocidade máxima', 'velocidade maxima']) || (u.includes('km/h') || u.includes('kmh'))) {
       return higherBetter(24, 36, val);
     }
+
+    // -----------------------------
+    // STRENGTH & POWER (higher better)
+    // -----------------------------
     if (t.includes('cmj') || t.includes('salto vertical') || (u.includes('cm') && t.includes('salto'))) {
       return higherBetter(30, 70, val);
+    }
+    if (t.includes('salto horizontal') || (t.includes('salto') && u.includes('m'))) {
+      return higherBetter(1.8, 2.8, val);
     }
     if (t.includes('plank') || t.includes('prancha')) {
       return higherBetter(60, 240, val);
     }
-    if (t.includes('abdominais') || t.includes('flexões')) {
+    if (has(t, ['abdominais', 'flexões', 'flexoes'])) {
       return higherBetter(20, 70, val);
     }
-    if (t.includes('medicine') || t.includes('arremesso') || (u.includes('m') && t.includes('arremesso'))) {
+    if (has(t, ['medicine', 'arremesso'])) {
       return higherBetter(3, 8, val);
     }
+
+    // -----------------------------
+    // FLEXIBILITY (higher better)
+    // -----------------------------
+    if (has(t, ['sentar e alcançar', 'sentar e alcancar', 'sit and reach'])) {
+      return higherBetter(5, 25, val);
+    }
+    if (has(t, ['mobilidade do tornozelo', 'tornozelo'])) {
+      return higherBetter(8, 20, val);
+    }
+
     return null;
   }
 
