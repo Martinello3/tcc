@@ -8,11 +8,12 @@ import { AvaliacaoCalculoService } from '../../services/avaliacao-calculo.servic
 import { JogadoresService } from '../../services/jogadores.service';
 import type { Jogador } from '../../models/player';
 import { BlocoInformativoComponent } from '../../components/bloco-informativo.component';
+import { NotaFinalResumoComponent } from '../../components/nota-final-resumo.component';
 
 @Component({
   standalone: true,
   selector: 'app-avaliacao-form',
-  imports: [CommonModule, FormsModule, RouterLink, BlocoInformativoComponent],
+  imports: [CommonModule, FormsModule, RouterLink, BlocoInformativoComponent, NotaFinalResumoComponent],
   template: `
   <div class="container">
     <div class="card shadow-sm sticky-top mb-3" style="top: 0; z-index: 1020;">
@@ -49,6 +50,15 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
         <div *ngIf="submitStatus==='success'" class="alert alert-success py-2">{{ submitMessage || 'Avaliação enviada com sucesso.' }}</div>
         <div *ngIf="submitStatus==='error'" class="alert alert-danger py-2">{{ submitMessage || 'Erro ao enviar avaliação. Tente novamente.' }}</div>
 
+        <!-- Resumo da Nota Final visível em todas as abas -->
+        <app-nota-final-resumo
+          [notaFinal]="notaFinal()"
+          [fisica]="scoreFisica()"
+          [tecnica]="scoreTecnica()"
+          [tatica]="scoreTatica()"
+        ></app-nota-final-resumo>
+
+
         <!-- DADOS GERAIS -->
         <div [hidden]="tab!=='ger'">
           <div class="row g-3">
@@ -65,20 +75,7 @@ import { BlocoInformativoComponent } from '../../components/bloco-informativo.co
               <textarea class="form-control" rows="3" [(ngModel)]="form.dados_avaliacao.comentarios_gerais" name="dados_avaliacao_comentarios" placeholder="Observações gerais, comportamentais, cabeçalho/movimentação/versatilidade, composição corporal, etc."></textarea>
             </div>
           </div>
-          <div class="mt-3">
-            <app-bloco-informativo [title]="'Como a Nota Final é Calculada?'" [content]="'A Nota Final (0-10) é uma média ponderada que reflete a importância de cada área para a posição do jogador.\nFórmula: Nota Final = ((Nota Física * Peso%) + (Nota Técnica * Peso%) + (Nota Tática * Peso%)) / 10\nOs pesos (%) variam para cada posição (Atacante, Zagueiro, etc.) para garantir uma avaliação justa.'" storageKey="bloco-nota-final"></app-bloco-informativo>
-          </div>
-          <div class="alert alert-light border mt-3 d-flex align-items-center justify-content-between">
-            <div>
-              <div class="small text-muted">Nota Final (atualiza automaticamente)</div>
-              <div class="display-6 m-0">{{ notaFinal() | number:'1.0-2' }}</div>
-            </div>
-            <div class="text-end small">
-              <div><strong>Física:</strong> {{ scoreFisica() | number:'1.0-2' }}</div>
-              <div><strong>Técnica:</strong> {{ scoreTecnica() | number:'1.0-2' }}</div>
-              <div><strong>Tática:</strong> {{ scoreTatica() | number:'1.0-2' }}</div>
-            </div>
-          </div>
+
         </div>
 
         <!-- FISICA -->

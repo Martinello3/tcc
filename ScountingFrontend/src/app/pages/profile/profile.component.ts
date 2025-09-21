@@ -226,8 +226,9 @@ export class ProfileComponent implements OnInit {
         this.originalFoto = this.foto;
         this.toast.success('Perfil salvo com sucesso');
       } catch {}
-    }, error: () => {
-      this.toast.error('Falha ao salvar o perfil');
+    }, error: (err) => {
+      this.saving = false;
+      this.toast.error(err?.error?.message || 'Falha ao salvar o perfil');
     }, complete: () => { this.saving = false; } });
   }
 

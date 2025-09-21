@@ -66,6 +66,35 @@ public class UsuariosController : CrudBase<ScoutingDbContext, Usuario>
         return result;
     }
 
+
+    [HttpPost]
+    public override async Task<ActionResult<Usuario>> Create(Usuario entity)
+    {
+        var nome = (entity.Nome ?? string.Empty).Trim();
+        var email = (entity.Email ?? string.Empty).Trim();
+        var senha = entity.Senha ?? string.Empty;
+        var perfil = string.IsNullOrWhiteSpace(entity.Perfil) ? "O" : entity.Perfil!.Trim();
+
+        if (string.IsNullOrWhiteSpace(nome) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha))
+            return BadRequest(new { message = "Nome, e-mail e senha são obrigatórios." });
+
+        var emailAttr = new System.ComponentModel.DataAnnotations.EmailAddressAttribute();
+        if (!emailAttr.IsValid(email))
+            return BadRequest(new { message = "E-mail inválido." });
+
+        var exists = await _db.Usuarios.AsNoTracking().AnyAsync(u => u.Email.ToLower() == email.ToLower());
+        if (exists) return Conflict(new { message = "Já existe um usuário com este e-mail." });
+
+        entity.Nome = nome;
+        entity.Email = email;
+        entity.Senha = senha;
+        entity.Perfil = perfil;
+
+        _db.Usuarios.Add(entity);
+        await _db.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
+    }
+
     public class UpdateMeuPerfilDto
     {
         public string? Nome { get; set; }

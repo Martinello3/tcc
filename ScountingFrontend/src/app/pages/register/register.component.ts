@@ -168,7 +168,17 @@ export class RegisterComponent {
         this.toast.success('Conta criada com sucesso. Faça login.');
         this.router.navigate(['/login']);
       },
-      error: (err) => this.toast.error(err?.error?.message ?? 'Falha ao criar conta'),
+      error: (err) => {
+        this.loading = false;
+        const status = err?.status;
+        const serverMsg = err?.error?.message as string | undefined;
+        let msg = 'Falha ao criar conta';
+        if (status === 0) msg = 'Falha de conexão com o servidor';
+        else if (status === 409) msg = serverMsg || 'E-mail já cadastrado.';
+        else if (status === 400) msg = serverMsg || 'Dados inválidos no cadastro.';
+        else if (serverMsg) msg = serverMsg;
+        this.toast.error(msg);
+      },
       complete: () => {
         this.loading = false;
       }

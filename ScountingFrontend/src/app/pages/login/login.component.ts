@@ -94,7 +94,9 @@ export class LoginComponent {
         this.router.navigate(['/']);
       },
       error: (err) => {
-        this.toast.error(err?.error?.message ?? 'Falha ao autenticar');
+        this.loading = false;
+        const msg = err?.error?.message || (err?.status === 0 ? 'Falha de conexão com o servidor' : 'Falha ao autenticar');
+        this.toast.error(msg);
       },
       complete: () => {
         this.loading = false;
