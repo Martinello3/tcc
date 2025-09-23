@@ -58,6 +58,26 @@ public class JogadoresController(ScoutingDbContext db) : ControllerBase
             .Where(j => j.UsuarioId == uid)
             .Include(j => j.ClubeAtual)
             .ToListAsync();
+
+        // Agrega NotaGeral (média de NotaFinal das avaliações) para exibir na grid
+        var ids = list.Select(j => j.Id).ToList();
+        if (ids.Count > 0)
+        {
+            var medias = await _db.Avaliacoes.AsNoTracking()
+                .Where(a => ids.Contains(a.JogadorId) && a.NotaFinal != null)
+                .GroupBy(a => a.JogadorId)
+                .Select(g => new { JogadorId = g.Key, Media = g.Average(a => a.NotaFinal!.Value) })
+                .ToListAsync();
+            var map = medias.ToDictionary(x => x.JogadorId, x => x.Media);
+            foreach (var j in list)
+            {
+                if (map.TryGetValue(j.Id, out var media))
+                {
+                    j.NotaGeral = Math.Round(media, 1);
+                }
+            }
+        }
+
         return Ok(list);
     }
 
