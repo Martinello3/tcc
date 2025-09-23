@@ -91,6 +91,9 @@ import { RelatoriosService } from '../../services/relatorios.service';
               <th class="w-player">
                 <div class="colhead"><i class="bi bi-person col-ico"></i><div>Jogador</div></div>
               </th>
+              <th class="text-center w-rating">
+                <div class="colhead"><i class="bi bi-star-fill col-ico"></i><div>Nota Geral</div></div>
+              </th>
               <th class="text-center w-club">
                 <div class="colhead"><i class="bi bi-shield-check col-ico"></i><div>Clube</div></div>
               </th>
@@ -105,9 +108,6 @@ import { RelatoriosService } from '../../services/relatorios.service';
               </th>
               <th class="text-center w-foot">
                 <div class="colhead"><i class="bi bi-hand-thumbs-up col-ico"></i><div>Pé</div></div>
-              </th>
-              <th class="text-center w-rating">
-                <div class="colhead"><i class="bi bi-star-fill col-ico"></i><div>Nota Geral</div></div>
               </th>
             </tr>
           </thead>
@@ -140,6 +140,9 @@ import { RelatoriosService } from '../../services/relatorios.service';
                     <div class="fw-semibold player-name">{{ j.nome }}</div>
                   </div>
                 </td>
+                <td class="text-center w-rating">
+                  <span class="rating-badge" [ngClass]="ratingClass(j.notaGeral)">{{ j.notaGeral != null ? (j.notaGeral | number:'1.1-1') : '-' }}</span>
+                </td>
                 <td class="text-center w-club">
                   @if (clubesById.get(j.clubeAtualId || -1)?.foto) {
                     <img class="club-logo" [src]="imgSrc(clubesById.get(j.clubeAtualId || -1)?.foto || null)" alt="clube" />
@@ -166,9 +169,6 @@ import { RelatoriosService } from '../../services/relatorios.service';
                 </td>
                 <td class="text-center w-foot">
                   <span class="badge text-bg-dark border">{{ j.peDominante || '-' }}</span>
-                </td>
-                <td class="text-center w-rating">
-                  <span class="rating-badge" [ngClass]="ratingClass(j.notaGeral)">{{ j.notaGeral != null ? (j.notaGeral | number:'1.1-1') : '-' }}</span>
                 </td>
               </tr>
             }

@@ -27,6 +27,7 @@ export const routes: Routes = [
       { path: 'relatorios/avaliacao/:jogadorId/:avaliacaoId', loadComponent: () => import('./pages/relatorios/relatorio-avaliacao-page.component').then(m => m.RelatorioAvaliacaoPageComponent) },
 
 
+      { path: 'profile/config', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
       { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) }
     ]
   },

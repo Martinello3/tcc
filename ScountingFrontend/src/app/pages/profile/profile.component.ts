@@ -6,10 +6,12 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { ToastService } from '../../services/toast.service';
 
+import { ConfiguracoesComponent } from './configuracoes.component';
+
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ConfiguracoesComponent],
   styles: [`
     .nav-tabs { border-bottom: 1px solid var(--border); }
     .nav-tabs .nav-link { color: var(--text-muted); border: 1px solid transparent; }
@@ -39,8 +41,9 @@ import { ToastService } from '../../services/toast.service';
   </div>
 
   <ul class="nav nav-tabs mb-3">
-    <li class="nav-item"><button class="nav-link" [class.active]="activeTab==='perfil'" (click)="activeTab='perfil'">Perfil</button></li>
-    <li class="nav-item"><button class="nav-link" [class.active]="activeTab==='conta'" (click)="activeTab='conta'">Conta</button></li>
+    <li class="nav-item"><button class="nav-link" [class.active]="activeTab==='perfil'" (click)="goTab('perfil')">Perfil</button></li>
+    <li class="nav-item"><button class="nav-link" [class.active]="activeTab==='config'" (click)="goTab('config')">Configurações</button></li>
+    <li class="nav-item"><button class="nav-link" [class.active]="activeTab==='conta'" (click)="goTab('conta')">Conta</button></li>
   </ul>
 
   @if (activeTab==='perfil') {
@@ -99,7 +102,7 @@ import { ToastService } from '../../services/toast.service';
         </div>
       </div>
     </div>
-  } @else {
+  } @else if (activeTab==='config') { <app-configuracoes></app-configuracoes> } @else {
     <div class="card shadow-sm danger-card">
       <div class="card-body">
         <h5 class="text-danger d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill"></i> Zona de Perigo</h5>
@@ -145,7 +148,7 @@ export class ProfileComponent implements OnInit {
   foto: string | null = null;
   saving = false;
 
-  activeTab: 'perfil' | 'conta' = 'perfil';
+  activeTab: 'perfil' | 'config' | 'conta' = (typeof window !== 'undefined' && window.location.pathname.includes('/profile/config')) ? 'config' : 'perfil';
   originalName: string = '';
   originalFoto: string | null = null;
 
@@ -155,6 +158,15 @@ export class ProfileComponent implements OnInit {
 
   private router = inject(Router);
   private toast = inject(ToastService);
+
+  goTab(tab: 'perfil' | 'config' | 'conta') {
+    this.activeTab = tab;
+    if (tab === 'config') {
+      this.router.navigate(['/profile', 'config']);
+    } else {
+      this.router.navigate(['/profile']);
+    }
+  }
 
   ngOnInit() {
     const id = (this.user as any)?.id;

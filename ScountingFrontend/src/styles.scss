@@ -1,6 +1,6 @@
 /* Olheiro Pro - Tema Dark Global (Inter + Paleta) */
 :root {
-  /* Paleta */
+  /* Paleta (Dark default) */
   --bg: #18181B;            /* Fundo Principal */
   --bg-elev: #27272A;       /* Cards/Tabelas */
   --primary: #10B981;       /* Ação/Realce */
@@ -8,12 +8,17 @@
   --text-muted: #A1A1AA;    /* Texto secundário */
   --border: #3F3F46;        /* Bordas sutis */
   --white: #FFFFFF;
+  --info-accent: #3B82F6;   /* Acento informativo */
+  --info-block-bg: var(--bg-elev);
 
   /* Espaçamentos/raio padrão */
   --radius: 8px;
   --pad-sm: .5rem;
   --pad-md: .75rem;
   --pad-lg: 1rem;
+  /* Tabela */
+  --table-stripe: rgba(255,255,255,.015);
+  --table-hover: rgba(255,255,255,.03);
 
   /* Bootstrap variables override for dark theme */
   --bs-body-bg: var(--bg);
@@ -24,6 +29,34 @@
   --bs-tertiary-color: var(--text-muted);
   --bs-link-color: var(--primary);
   --bs-emphasis-color: var(--text);
+}
+
+/* Light theme overrides */
+html.theme-light {
+  --bg: #F8FAFC;
+  --bg-elev: #FFFFFF;
+  --border: #E5E7EB;
+  --text: #111827;
+  --text-muted: #6B7280;
+  --primary: #10B981;
+  --white: #FFFFFF;
+  --info-accent: #2563EB;
+  --info-block-bg: #F8FAFC;
+
+  /* Bootstrap variables override for light theme */
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-border-color: var(--border);
+  --bs-heading-color: var(--text);
+  --bs-secondary-color: var(--text-muted);
+  --bs-tertiary-color: var(--text-muted);
+  --bs-link-color: var(--primary);
+  --bs-emphasis-color: var(--text);
+}
+
+/* Smooth theme transitions */
+body, .card, .table, .nav-tabs .nav-link, input, select, textarea, .btn, .alert, .dropdown-menu {
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
 * { box-sizing: border-box; }
@@ -198,12 +231,12 @@ input[type="file"]::file-selector-button {
   border-radius: var(--radius);
 }
 
-/* Tables striping in dark */
+/* Tables striping (theme-aware) */
 .table-striped > tbody > tr:nth-of-type(odd) {
-  --bs-table-accent-bg: rgba(255,255,255,.015);
+  --bs-table-accent-bg: var(--table-stripe);
   background-color: var(--bs-table-accent-bg);
 }
-.table-hover > tbody > tr:hover { background-color: rgba(255,255,255,.03); }
+.table-hover > tbody > tr:hover { background-color: var(--table-hover); }
 .table caption { color: var(--text-muted); }
 
 /* Ensure combobox/select has the same width as inputs across the app */

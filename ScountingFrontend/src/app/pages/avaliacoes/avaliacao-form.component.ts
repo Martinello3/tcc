@@ -82,7 +82,7 @@ import { NotaFinalResumoComponent } from '../../components/nota-final-resumo.com
         <div [hidden]="tab!=='fis'">
           <div class="row g-3">
             <div class="col-12">
-              <app-bloco-informativo [title]="'Como a Nota Física é Calculada?'" [content]="'A nota é a média de todos os testes, convertidos para uma escala de 0-100 e depois ajustados para 0-10.\n\nPara tempos (menor é melhor): Nota(0-100) = 100 * (1 - (Resultado - Ótimo) / (Ruim - Ótimo))\n\nPara pontuações (maior é melhor): Nota(0-100) = 100 * ((Resultado - Ruim) / (Ótimo - Ruim))\nA Nota Física (0-10) final é a média de todas essas notas, dividida por 10.'" storageKey="bloco-nota-fisica"></app-bloco-informativo>
+              <app-bloco-informativo [title]="'Como a Nota Física é Calculada?'" [html]="fisicaInfoHtml" storageKey="bloco-nota-fisica"></app-bloco-informativo>
             </div>
             <div class="col-12 d-flex align-items-center justify-content-between mt-2">
               <div class="fw-semibold">Testes Físicos Realizados</div>
@@ -129,7 +129,7 @@ import { NotaFinalResumoComponent } from '../../components/nota-final-resumo.com
         <div [hidden]="tab!=='tec'">
           <div class="row g-3">
             <div class="col-12">
-              <app-bloco-informativo [title]="'Como a Nota Técnica é Calculada?'" [content]="'A nota de cada exercício é baseada na sua porcentagem de acerto. A nota final da área é a média de todos os exercícios.\n\nFórmula por exercício: Nota(0-100) = (Acertos / Tentativas) * 100\nA Nota Técnica (0-10) final é a média de todas as notas dos exercícios, dividida por 10.'" storageKey="bloco-nota-tecnica"></app-bloco-informativo>
+              <app-bloco-informativo [title]="'Como a Nota Técnica é Calculada?'" [html]="tecnicaInfoHtml" storageKey="bloco-nota-tecnica"></app-bloco-informativo>
             </div>
             <div class="col-12 d-flex align-items-center justify-content-between mt-2">
               <div class="fw-semibold">Exercícios Técnicos Realizados</div>
@@ -180,7 +180,7 @@ import { NotaFinalResumoComponent } from '../../components/nota-final-resumo.com
         <div [hidden]="tab!=='tat'">
           <div class="row g-3">
             <div class="col-12">
-              <app-bloco-informativo [title]="'Como a Nota Tática/Comport. é Calculada?'" [content]="'A nota de cada atributo é convertida para a escala de 0-100. A nota final da área é a média de todos os atributos.\n\nFórmula por atributo: Nota(0-100) = Nota do Slider * 10\nA Nota Tática (0-10) final é a média de todas as notas dos sliders, dividida por 10'" storageKey="bloco-nota-tatica"></app-bloco-informativo>
+              <app-bloco-informativo [title]="'Como a Nota Tática/Comport. é Calculada?'" [html]="taticaInfoHtml" storageKey="bloco-nota-tatica"></app-bloco-informativo>
             </div>
             <!-- Posicionamento -->
             <div class="col-12">
@@ -317,6 +317,32 @@ export class AvaliacaoFormComponent {
   scorePsico = computed(() => this.avg([this.form.disciplina, this.form.lideranca, this.form.proatividade, this.form.inteligenciaEmocional]));
 
   notaFinal = computed(() => this.calc.notaFinal());
+
+
+  // Conteúdos HTML para os blocos informativos das áreas (texto simples)
+  fisicaInfoHtml: string = `
+    <p>A Nota Física é a média (0 a 10) das notas de todos os testes. 
+
+    Testes de tempo (quanto menor for o tempo, melhor o resultado): 
+    Formula:
+    NotaPorTeste = 10 * (1 - (Resultado - Otimo) / (Ruim - Otimo)).
+
+    Testes de pontuação ou distância (quanto maior for o resultado, melhor): 
+    Formula:
+    NotaPorTeste = 10 * ((Resultado - Ruim) / (Otimo - Ruim)).</p>
+  `;
+
+  tecnicaInfoHtml: string = `
+    <p>A Nota Técnica é a média das notas dos exercícios técnicos em que em cada exercício a nota vem do percentual de acertos. 
+    Formula: 
+    NotaPorExercicio = 10 * (Acertos / Tentativas).</p>
+  `;
+
+  taticaInfoHtml: string = `
+    <p>A Nota Tática é a média das notas dos atributos táticos (ex.: leitura de jogo, posicionamento), todos em escala de 0 a 10. 
+    Formula: 
+    NotaTatica = SomaDasNotasDosAtributos / QuantidadeDeAtributos.</p>
+  `;
 
   canSubmit = computed(() => {
     const v = this.form;

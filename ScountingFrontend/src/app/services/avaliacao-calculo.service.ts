@@ -6,19 +6,29 @@ export class AvaliacaoCalculoService {
   readonly notaFisica = signal<number>(0);
   readonly notaTecnica = signal<number>(0);
   readonly notaTatica = signal<number>(0);
-  readonly notaFinal = signal<number>(0);
+  // Nota Final pode ser nula (avaliação parcial)
+  readonly notaFinal = signal<number | null>(null);
 
   recompute(form: any, posicao?: string | null) {
-    const fis100 = this.calcFisica100(form?.dados_avaliacao?.fisica || []);
-    const tec100 = this.calcTecnica100(form?.dados_avaliacao?.tecnica || []);
-    const tat100 = this.calcTatica100(form?.dados_avaliacao?.tatica_comportamental || {});
+    const fisArr = form?.dados_avaliacao?.fisica || [];
+    const tecArr = form?.dados_avaliacao?.tecnica || [];
+    const tatObj = form?.dados_avaliacao?.tatica_comportamental || {};
+
+    const fisRes = this.calcFisica100_withCompleteness(fisArr);
+    const tecRes = this.calcTecnica100_withCompleteness(tecArr);
+    const tatRes = this.calcTatica100_withCompleteness(tatObj);
+
+    const fis100 = fisRes.value100;
+    const tec100 = tecRes.value100;
+    const tat100 = tatRes.value100;
 
     const fis10 = this.round2(fis100 / 10);
     const tec10 = this.round2(tec100 / 10);
     const tat10 = this.round2(tat100 / 10);
 
     const { wFis, wTec, wTat } = this.pesosPorPosicao(posicao || '');
-    const final10 = this.round2(((fis100 * wFis) + (tec100 * wTec) + (tat100 * wTat)) / 10);
+    const isComplete = fisRes.hasData && tecRes.hasData && tatRes.hasData;
+    const final10 = isComplete ? this.round2(((fis100 * wFis) + (tec100 * wTec) + (tat100 * wTat)) / 10) : null;
 
     this.notaFisica.set(fis10);
     this.notaTecnica.set(tec10);
@@ -27,6 +37,56 @@ export class AvaliacaoCalculoService {
   }
 
   private round2(v: number) { return Math.round((v + Number.EPSILON) * 100) / 100; }
+
+  private calcFisica100_withCompleteness(items: any[]): { value100: number; hasData: boolean } {
+    const xs: number[] = [];
+    let hasPositive = false;
+    for (const t of items || []) {
+      const s = this.normalizaFisico(String(t?.teste || ''), String(t?.tipo_teste || ''), String(t?.resultado || ''), String(t?.unidade || ''));
+      if (s != null) {
+        xs.push(s);
+        if (s > 0) hasPositive = true;
+      }
+    }
+    const value100 = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    return { value100, hasData: hasPositive };
+  }
+
+  private calcTecnica100_withCompleteness(items: any[]): { value100: number; hasData: boolean } {
+    const xs: number[] = [];
+    let hasValid = false;
+    for (const e of items || []) {
+      const ac = Number(e?.acertos);
+      const tt = Number(e?.tentativas);
+      if (Number.isFinite(ac) && Number.isFinite(tt) && tt > 0) {
+        const acClamped = Math.max(0, Math.min(ac, tt));
+        const pct = (acClamped / tt) * 100;
+        xs.push(pct);
+        hasValid = true;
+      }
+    }
+    const value100 = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    return { value100, hasData: hasValid };
+  }
+
+  private calcTatica100_withCompleteness(tc: any): { value100: number; hasData: boolean } {
+    const xs: number[] = [];
+    let hasPositive = false;
+    const add = (v: any) => {
+      const n = this.parseDecimal(v);
+      if (n != null) {
+        xs.push(n * 10);
+        if (n > 0) hasPositive = true;
+      }
+    };
+    if (tc) {
+      add(tc.posicionamento);
+      add(tc.leitura_jogo);
+      add(tc.tomada_decisao);
+    }
+    const value100 = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    return { value100, hasData: hasPositive };
+  }
 
   private parseDecimal(s: any): number | null {
     if (s === null || s === undefined) return null;

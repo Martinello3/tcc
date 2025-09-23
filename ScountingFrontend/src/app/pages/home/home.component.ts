@@ -4,6 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 
+import { ThemeService } from '../../services/theme.service';
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -109,6 +111,7 @@ export class HomeComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
   private http = inject(HttpClient);
+  private theme = inject(ThemeService); // ensure ThemeService initializes on app load
   user = this.auth.user();
 
   collapsed = false;
