@@ -10,7 +10,9 @@ export type AgeRangeCode = 'ATE_15' | '16_18' | '19_21' | 'ACIMA_21';
 export interface JogadoresFilterState {
   posicoes: string[];
   pes: string[];
-  ageRanges: AgeRangeCode[];
+  nome: string; // termo de busca por nome (case-insensitive)
+  ageRange: [number, number] | null; // faixa etária [min,max]
+  notaRange: [number, number] | null; // faixa de nota geral [min,max]
 }
 
 @Injectable({ providedIn: 'root' })
@@ -23,7 +25,7 @@ export class JogadoresFacade {
   readonly removingId = signal<number | null>(null);
 
   // Filtros múltiplos (multi-select)
-  readonly filters = signal<JogadoresFilterState>({ posicoes: [], pes: [], ageRanges: [] });
+  readonly filters = signal<JogadoresFilterState>({ posicoes: [], pes: [], nome: '', ageRange: null, notaRange: null });
 
   readonly sortKey = signal<keyof Jogador>('nome');
   readonly sortDir = signal<SortDir>('asc');
@@ -33,12 +35,17 @@ export class JogadoresFacade {
   readonly total = computed(() => this.items().length);
 
   readonly filtered = computed(() => {
-    const { posicoes, pes, ageRanges } = this.filters();
+    const { posicoes, pes, nome, ageRange, notaRange } = this.filters();
     const posSet = new Set((posicoes || []).map(v => (v || '').toLowerCase()));
     const pesSet = new Set((pes || []).map(v => (v || '').toLowerCase()));
-    const ageSet = new Set(ageRanges || []);
+    const term = (nome || '').trim().toLowerCase();
 
     return this.items().filter(j => {
+      // Nome (contains, case-insensitive)
+      if (term) {
+        const name = (j.nome || '').toLowerCase();
+        if (!name.includes(term)) return false;
+      }
       // Posição (OR dentro da categoria)
       if (posSet.size > 0) {
         const jp = (j.posicao || '').toLowerCase();
@@ -53,8 +60,8 @@ export class JogadoresFacade {
         for (const opt of pesSet) { if (pf.includes(opt)) { ok = true; break; } }
         if (!ok) return false;
       }
-      // Faixa etária (OR dentro da categoria)
-      if (ageSet.size > 0) {
+      // Faixa etária (range numérico [min,max])
+      if (ageRange) {
         const age = (() => {
           const d = j.dataNascimento ? new Date(j.dataNascimento) : null;
           if (!d || isNaN(d.getTime())) return null as number | null;
@@ -65,14 +72,14 @@ export class JogadoresFacade {
           return a;
         })();
         if (age == null) return false;
-        let code: AgeRangeCode | null = null;
-        if (age <= 15) code = 'ATE_15';
-        else if (age >= 16 && age <= 18) code = '16_18';
-        else if (age >= 19 && age <= 21) code = '19_21';
-        else if (age > 21) code = 'ACIMA_21';
-        if (!code || !ageSet.has(code)) return false;
+        if (age < ageRange[0] || age > ageRange[1]) return false;
       }
-      return true; // AND entre categorias (já que retornamos false quando falha)
+      // Nota geral (range numérico [min,max]) — jogadores sem nota contam como 0
+      if (notaRange) {
+        const n = (j.notaGeral ?? 0);
+        if (n < notaRange[0] || n > notaRange[1]) return false;
+      }
+      return true; // AND entre categorias
     });
   });
 
@@ -111,7 +118,7 @@ export class JogadoresFacade {
   }
 
   clearFilters() {
-    this.filters.set({ posicoes: [], pes: [], ageRanges: [] });
+    this.filters.set({ posicoes: [], pes: [], nome: '', ageRange: null, notaRange: null });
     this.page.set(1);
   }
 
