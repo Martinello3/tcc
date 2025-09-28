@@ -11,24 +11,39 @@ import { ThemeService } from '../../services/theme.service';
   standalone: true,
   imports: [CommonModule, RouterLink, RouterOutlet, RouterLinkActive],
   styles: [`
-  .sidebar { width: 260px; transition: width .2s ease; }
+  .sidebar { width: 260px; transition: width .2s ease; position: relative; overflow: visible; }
   .sidebar.collapsed { width: 72px; }
   .brand-text { transition: opacity .2s ease; }
   .sidebar.collapsed .brand-text { opacity: 0; visibility: hidden; width: 0; }
+
+  /* Menu items */
   .menu-item { cursor: pointer; border-radius: .5rem; padding: .5rem .5rem; transition: background-color .2s ease,color .2s ease; }
   .menu-item:hover { background-color: rgba(255,255,255,.06); }
-  .menu-link { text-decoration: none; color: inherit; display: flex; align-items: center; gap: .5rem; width: 100%; padding: .375rem .5rem .375rem .75rem; }
+  .menu-link { text-decoration: none; color: inherit; display: flex; align-items: center; gap: .5rem; width: 100%; padding: .375rem .5rem .375rem .75rem; border-radius: .5rem; }
   .active-link { border-left: 6px solid #10B981; background-color: rgba(16,185,129,.18); color: #10B981; padding-left: 1rem; }
+
   .menu-text { white-space: nowrap; }
   .sidebar.collapsed .menu-text { display: none; }
+
+  /* Collapsed alignment: center icons, remove left border highlight */
+  .sidebar.collapsed .menu-link { justify-content: center; padding: .5rem 0; }
+  .sidebar.collapsed .active-link { border-left: 0; padding-left: 0; background-color: rgba(16,185,129,.18); color: #10B981; }
+
+  /* Profile area */
   .profile-toggle { cursor: pointer; border-radius: .5rem; padding: .375rem; transition: background-color .2s ease; width:100%; display:flex; align-items:center; gap:.5rem; }
   .profile-toggle:hover { background-color: rgba(255,255,255,.06); }
   .profile-texts { line-height: 1.1; }
   .sidebar.collapsed .profile-texts { display: none; }
+  .sidebar.collapsed .profile-toggle { justify-content: center; padding: .25rem; }
+  .sidebar.collapsed .profile-toggle .rounded-circle { width: 32px !important; height: 32px !important; min-width: 32px; min-height: 32px; border-radius: 50% !important; }
+  .sidebar.collapsed .profile-toggle .bi-caret-down-fill { display: none; }
+
+  /* Dropdown positioning */
   .dropdown-menu-dark { --bs-dropdown-bg: #1f2937; }
   .divider { border-top: 1px solid var(--bs-border-color-translucent); margin: .75rem 0; }
   .dropdown { position: relative; }
-  .dropdown-menu { display: none; position: absolute; top: 100%; right: 0; min-width: 200px; margin-top: .25rem; }
+  .dropdown-menu { display: none; position: absolute; top: 100%; right: 0; min-width: 200px; margin-top: .25rem; z-index: 2000; }
+  .sidebar.collapsed .dropdown-menu { left: calc(100% + .25rem); right: auto; top: 0; margin-top: 0; }
   .dropdown-menu.show { display: block; }
   `],
   template: `
@@ -36,8 +51,11 @@ import { ThemeService } from '../../services/theme.service';
   <!-- Sidebar -->
   <nav class="sidebar border-end border p-3 bg-elev" [class.collapsed]="collapsed">
     <div class="d-flex align-items-center mb-3">
-      <img src="/brand/seu-olheiro.png" alt="Seu Olheiro" style="height: 24px; width: auto;" />
-      <span class="ms-2 fw-semibold brand-text">Olheiro Pro</span>
+      <picture>
+        <source srcset="/brand/seu-olheiro.svg" type="image/svg+xml" />
+        <img src="/brand/seu-olheiro.png" alt="Seu Olheiro" style="height: 24px; width: auto;" />
+      </picture>
+      <span class="ms-2 fw-semibold brand-text">Seu Olheiro</span>
     </div>
     <ul class="list-unstyled">
       <li class="menu-item">

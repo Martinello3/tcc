@@ -44,9 +44,14 @@ import { DialogService } from '../../services/dialog.service';
             <label class="form-label">Email</label>
             <input [(ngModel)]="email" name="email" type="email" class="form-control form-control-lg" required />
           </div>
-          <div class="mb-2">
+          <div class="mb-5">
             <label class="form-label">Senha</label>
-            <input [(ngModel)]="password" name="password" type="password" class="form-control form-control-lg" required />
+            <div class="input-group input-group-lg">
+              <input [(ngModel)]="password" name="password" [type]="showPassword ? 'text' : 'password'" class="form-control" required />
+              <button type="button" class="btn btn-outline-secondary" (click)="togglePassword()" [attr.aria-pressed]="showPassword" [title]="showPassword ? 'Ocultar senha' : 'Mostrar senha'">
+                <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+              </button>
+            </div>
           </div>
           <button class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center" [disabled]="f.invalid || loading">
             @if (!loading) { <span>Entrar</span> }
@@ -77,6 +82,7 @@ export class LoginComponent {
   password = '';
   loading = false;
   currentYear = new Date().getFullYear();
+  showPassword = false;
 
   onLogoError(ev: Event) {
     const img = ev.target as HTMLImageElement;
@@ -84,6 +90,8 @@ export class LoginComponent {
       img.src = '/favicon.ico';
     }
   }
+
+  togglePassword() { this.showPassword = !this.showPassword; }
 
   onSubmit() {
     if (this.loading) return;

@@ -69,11 +69,21 @@ import { ToastService } from '../../services/toast.service';
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label">Senha</label>
-                  <input [(ngModel)]="senha" name="senha" type="password" class="form-control" required />
+                  <div class="input-group input-group-lg">
+                    <input [(ngModel)]="senha" name="senha" [type]="showSenha ? 'text' : 'password'" class="form-control" required />
+                    <button type="button" class="btn btn-outline-secondary" (click)="toggleSenha()" [attr.aria-pressed]="showSenha" [title]="showSenha ? 'Ocultar senha' : 'Mostrar senha'">
+                      <i class="bi" [class.bi-eye]="!showSenha" [class.bi-eye-slash]="showSenha"></i>
+                    </button>
+                  </div>
                 </div>
                 <div class="col-12 col-md-6">
-                  <label class="form-label">Confirmar senha</label>
-                  <input [(ngModel)]="confirmar" name="confirmar" type="password" class="form-control" required />
+                  <label class="form-label">Confirmação de Senha</label>
+                  <div class="input-group input-group-lg">
+                    <input [(ngModel)]="confirmar" name="confirmar" [type]="showConfirmar ? 'text' : 'password'" class="form-control" required />
+                    <button type="button" class="btn btn-outline-secondary" (click)="toggleConfirmar()" [attr.aria-pressed]="showConfirmar" [title]="showConfirmar ? 'Ocultar senha' : 'Mostrar senha'">
+                      <i class="bi" [class.bi-eye]="!showConfirmar" [class.bi-eye-slash]="showConfirmar"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -114,6 +124,8 @@ export class RegisterComponent {
   previewFoto: string | null = null;
   private previewObjectUrl: string | null = null;
   loading = false;
+  showSenha = false;
+  showConfirmar = false;
 
   async uploadUsuarioFoto(evt: Event) {
     const input = evt.target as HTMLInputElement;
@@ -143,6 +155,9 @@ export class RegisterComponent {
     this.previewFoto = null;
     if (this.previewObjectUrl) { URL.revokeObjectURL(this.previewObjectUrl); this.previewObjectUrl = null; }
   }
+
+  toggleSenha() { this.showSenha = !this.showSenha; }
+  toggleConfirmar() { this.showConfirmar = !this.showConfirmar; }
 
   fotoSrc(val: string | null | undefined): string | null {
     if (!val) return null;

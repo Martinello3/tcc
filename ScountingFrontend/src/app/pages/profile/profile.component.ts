@@ -148,7 +148,14 @@ export class ProfileComponent implements OnInit {
   foto: string | null = null;
   saving = false;
 
-  activeTab: 'perfil' | 'config' | 'conta' = (typeof window !== 'undefined' && window.location.pathname.includes('/profile/config')) ? 'config' : 'perfil';
+  activeTab: 'perfil' | 'config' | 'conta' = (() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname;
+      if (p.includes('/profile/config')) return 'config';
+      if (p.includes('/profile/conta')) return 'conta';
+    }
+    return 'perfil';
+  })();
   originalName: string = '';
   originalFoto: string | null = null;
 
@@ -163,6 +170,8 @@ export class ProfileComponent implements OnInit {
     this.activeTab = tab;
     if (tab === 'config') {
       this.router.navigate(['/profile', 'config']);
+    } else if (tab === 'conta') {
+      this.router.navigate(['/profile', 'conta']);
     } else {
       this.router.navigate(['/profile']);
     }

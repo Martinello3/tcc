@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ElementRef, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import type { Jogador } from '../../models/player';
@@ -17,9 +17,7 @@ import { RelatoriosService } from '../../services/relatorios.service';
   imports: [CommonModule, RouterLink],
   styles: [`
     .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 1; }
-    .search-group { width: 360px; }
-    .search-input { height: 34px; padding-top: .25rem; padding-bottom: .25rem; }
-    .input-group-text { height: 34px; padding-top: .25rem; padding-bottom: .25rem; }
+
     .avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--bg-elev); border: 1px solid var(--border); }
     .club-logo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--bg); border: 1px solid var(--border); }
     .row-click { cursor: pointer; }
@@ -52,6 +50,19 @@ import { RelatoriosService } from '../../services/relatorios.service';
     .row-actions { opacity: 1; white-space: nowrap; }
     .wide-table { min-width: 1280px; }
 
+    /* Filtros - posicionamento e tema */
+    .filters-bar .dropdown { position: relative; }
+    .filters-bar .dropdown .btn { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
+    .filters-bar .dropdown-menu { position: absolute; top: calc(100% + 4px); left: 0; transform: none !important; min-width: 100%; z-index: 1050; background: var(--bg-elev); color: var(--text); border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+    .filters-bar .dropdown-menu:not(.show) { display: none; }
+    .filters-bar .dropdown-item { color: var(--text); }
+    .filters-bar .dropdown-item:hover { background: var(--bg); }
+    .filters-bar .dropdown-item.form-check { display: flex; align-items: center; gap: .5rem; width: 100%; cursor: pointer; }
+    .filters-bar .dropdown-item.form-check .form-check-input { position: relative; margin: 0; float: none; }
+    .filters-bar .dropdown-divider { margin: .5rem 0; border-color: var(--border); }
+
+
+
   `],
 
   template: `
@@ -62,19 +73,87 @@ import { RelatoriosService } from '../../services/relatorios.service';
       <small class="text-muted">Gerencie os jogadores cadastrados</small>
     </div>
     <div class="d-flex gap-2">
-      <div class="input-group search-group">
-        <span class="input-group-text py-0"><i class="bi bi-search"></i></span>
-        <input type="text" class="form-control search-input" placeholder="Buscar por nome" (input)="onFilter($any($event.target).value)" />
-      </div>
       <a class="btn btn-success" [routerLink]="['/jogadores','novo']"><i class="bi bi-plus-lg"></i> Novo</a>
     </div>
   </div>
+
+  <!-- Barra de Filtros (entre o header e a tabela) -->
+  <div class="row g-2 align-items-center mb-3 filters-bar">
+    <!-- Posição -->
+    <div class="col-12 col-md-3">
+      <div class="dropdown" #posDrop>
+        <button type="button" class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center" (click)="togglePos($event)" aria-label="Filtro de posição">
+          <span><i class="bi bi-geo-alt me-2"></i>{{ posButtonLabel() }}</span>
+          <i class="bi bi-caret-down-fill small"></i>
+        </button>
+        <ul class="dropdown-menu w-100" [class.show]="showPos">
+          <li class="px-3 py-1 text-muted small">Selecione uma ou mais posições</li>
+          <li *ngFor="let p of posicoesOptions()">
+            <label class="dropdown-item form-check d-flex align-items-center gap-2 mb-0" (click)="$event.stopPropagation()">
+              <input class="form-check-input" type="checkbox" [checked]="filters().posicoes.includes(p)" (change)="onTogglePos(p)" />
+              <span>{{ p }}</span>
+            </label>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><button class="dropdown-item text-danger" (click)="clearPos(); $event.stopPropagation()">Limpar Posição</button></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Pé Dominante -->
+    <div class="col-12 col-md-3">
+      <div class="dropdown" #footDrop>
+        <button type="button" class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center" (click)="toggleFoot($event)" aria-label="Filtro de pé dominante">
+          <span><i class="bi bi-hand-thumbs-up me-2"></i>{{ footButtonLabel() }}</span>
+          <i class="bi bi-caret-down-fill small"></i>
+        </button>
+        <ul class="dropdown-menu w-100" [class.show]="showFoot">
+          <li class="px-3 py-1 text-muted small">Selecione um ou mais</li>
+          <li *ngFor="let f of pesOptions()">
+            <label class="dropdown-item form-check d-flex align-items-center gap-2 mb-0" (click)="$event.stopPropagation()">
+              <input class="form-check-input" type="checkbox" [checked]="filters().pes.includes(f)" (change)="onToggleFoot(f)" />
+              <span>{{ f }}</span>
+            </label>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><button class="dropdown-item text-danger" (click)="clearFoot(); $event.stopPropagation()">Limpar Pé Dominante</button></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Faixa Etária -->
+    <div class="col-12 col-md-3">
+      <div class="dropdown" #ageDrop>
+        <button type="button" class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center" (click)="toggleAge($event)" aria-label="Filtro de faixa etária">
+          <span><i class="bi bi-calendar-event me-2"></i>{{ ageButtonLabel() }}</span>
+          <i class="bi bi-caret-down-fill small"></i>
+        </button>
+        <ul class="dropdown-menu w-100" [class.show]="showAge">
+          <li class="px-3 py-1 text-muted small">Selecione uma ou mais faixas</li>
+          <li *ngFor="let a of ageOptions">
+            <label class="dropdown-item form-check d-flex align-items-center gap-2 mb-0" (click)="$event.stopPropagation()">
+              <input class="form-check-input" type="checkbox" [checked]="filters().ageRanges.includes(a.code)" (change)="onToggleAge(a.code)" />
+              <span>{{ a.label }}</span>
+            </label>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><button class="dropdown-item text-danger" (click)="clearAge(); $event.stopPropagation()">Limpar Faixa Etária</button></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-auto ms-md-auto text-md-end">
+      <button type="button" class="btn btn-outline-secondary" (click)="onClearFilters()" aria-label="Limpar filtros"><i class="bi bi-x-circle"></i> Limpar Filtros</button>
+    </div>
+  </div>
+
 
   <div class="card shadow-sm position-relative">
     @if (facade.loading()) {
       <div class="overlay">
         <div class="spinner-border text-success" role="status"></div>
       </div>
+
     }
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -187,7 +266,6 @@ export class JogadorListComponent implements OnInit {
   private clubesSvc = inject(ClubesService);
   clubesById = new Map<number, { id: number; nome: string; foto?: string | null }>();
 
-
   flagBroken = new Set<number>();
   // Serviços para ações rápidas
   private auth = inject(AuthService);
@@ -203,8 +281,73 @@ export class JogadorListComponent implements OnInit {
   private dialog = inject(DialogService);
 
   jogadores = this.facade.items;
-  query = this.facade.filter;
   displayed = this.facade.displayed;
+
+  // ====== Filtros ======
+  filters = this.facade.filters; // signal from facade
+
+  // Opções dinâmicas com fallback
+  posicoesOptions = computed(() => ['Goleiro','Zagueiro','Lateral Direito','Lateral Esquerdo','Volante','Meia','Atacante','Ponta']);
+  pesOptions = computed(() => ['Destro','Canhoto','Ambidestro']);
+  ageOptions = [
+    { code: 'ATE_15' as const, label: 'Até 15 anos' },
+    { code: '16_18' as const, label: '16 a 18 anos' },
+    { code: '19_21' as const, label: '19 a 21 anos' },
+    { code: 'ACIMA_21' as const, label: 'Acima de 21 anos' },
+  ];
+  ageLabel(code: 'ATE_15' | '16_18' | '19_21' | 'ACIMA_21' | null | undefined) {
+    if (!code) return 'Todas as idades';
+    const f = this.ageOptions.find(x => x.code === code);
+    return f?.label || 'Todas as idades';
+  }
+
+  // Dropdown state
+  showPos = false; showFoot = false; showAge = false;
+  @ViewChild('posDrop') posDrop?: ElementRef<HTMLElement>;
+  @ViewChild('footDrop') footDrop?: ElementRef<HTMLElement>;
+  @ViewChild('ageDrop') ageDrop?: ElementRef<HTMLElement>;
+
+  togglePos(ev: MouseEvent) { ev.stopPropagation(); this.showPos = !this.showPos; this.showFoot = false; this.showAge = false; }
+  toggleFoot(ev: MouseEvent) { ev.stopPropagation(); this.showFoot = !this.showFoot; this.showPos = false; this.showAge = false; }
+  toggleAge(ev: MouseEvent) { ev.stopPropagation(); this.showAge = !this.showAge; this.showPos = false; this.showFoot = false; }
+
+  @HostListener('document:click', ['$event'])
+  onDocClick(ev: MouseEvent) {
+    const t = ev.target as Node;
+    const inPos = !!this.posDrop?.nativeElement.contains(t);
+    const inFoot = !!this.footDrop?.nativeElement.contains(t);
+    const inAge = !!this.ageDrop?.nativeElement.contains(t);
+    if (!inPos && !inFoot && !inAge) { this.showPos = this.showFoot = this.showAge = false; }
+  }
+
+  // Labels dos botões com contador
+  posButtonLabel() { const n = this.filters().posicoes?.length || 0; return n ? `Posição (${n})` : 'Posição'; }
+  footButtonLabel() { const n = this.filters().pes?.length || 0; return n ? `Pé Dominante (${n})` : 'Pé Dominante'; }
+  ageButtonLabel() { const n = this.filters().ageRanges?.length || 0; return n ? `Faixa Etária (${n})` : 'Faixa Etária'; }
+
+  // Toggle de seleção múltipla
+  onTogglePos(p: string) {
+    const cur = new Set(this.filters().posicoes || []);
+    if (cur.has(p)) cur.delete(p); else cur.add(p);
+    this.facade.setFilters({ posicoes: Array.from(cur) });
+  }
+  onToggleFoot(f: string) {
+    const cur = new Set(this.filters().pes || []);
+    if (cur.has(f)) cur.delete(f); else cur.add(f);
+    this.facade.setFilters({ pes: Array.from(cur) });
+  }
+  onToggleAge(code: 'ATE_15' | '16_18' | '19_21' | 'ACIMA_21') {
+    const cur = new Set(this.filters().ageRanges || []);
+    if (cur.has(code)) cur.delete(code); else cur.add(code);
+    this.facade.setFilters({ ageRanges: Array.from(cur) });
+  }
+
+  // Limpar por categoria
+  clearPos() { this.facade.setFilters({ posicoes: [] }); }
+  clearFoot() { this.facade.setFilters({ pes: [] }); }
+  clearAge() { this.facade.setFilters({ ageRanges: [] }); }
+
+  onClearFilters() { this.facade.clearFilters(); }
 
   ngOnInit() {
     this.facade.load();
@@ -223,9 +366,7 @@ export class JogadorListComponent implements OnInit {
     }
   }
 
-  onFilter(value: string) {
-    this.facade.setFilter(value);
-  }
+  // onFilter removido — agora usamos múltiplos filtros via dropdowns
 
   async onDelete(j: Jogador) {
     const ok = await this.dialog.confirm(`Excluir jogador "${j.nome}"?`, { title: 'Confirmação', variant: 'danger', confirmText: 'Excluir' });

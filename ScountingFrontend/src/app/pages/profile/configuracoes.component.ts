@@ -35,8 +35,6 @@ import { ThemeService } from '../../services/theme.service';
     .muted { color: var(--text-muted); }
   `],
   template: `
-    <h2 class="title">Configurações</h2>
-
     <div class="card shadow-sm">
       <div class="card-body">
         <div class="section">
