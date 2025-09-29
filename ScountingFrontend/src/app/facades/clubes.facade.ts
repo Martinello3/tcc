@@ -5,6 +5,13 @@ import { finalize } from 'rxjs/operators';
 
 export type SortDir = 'asc' | 'desc';
 
+export interface ClubesFilterState {
+  nome: string;
+  cidade: string;
+  estado: string;
+  pais: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ClubesFacade {
   private api = inject(ClubesService);
@@ -14,7 +21,7 @@ export class ClubesFacade {
   readonly loading = signal(false);
   readonly removingId = signal<number | null>(null);
 
-  readonly filter = signal('');
+  readonly filters = signal<ClubesFilterState>({ nome: '', cidade: '', estado: '', pais: '' });
   readonly sortKey = signal<keyof Clube>('nome');
   readonly sortDir = signal<SortDir>('asc');
   readonly page = signal(1);
@@ -23,9 +30,21 @@ export class ClubesFacade {
   readonly total = computed(() => this.items().length);
 
   readonly filtered = computed(() => {
-    const q = this.filter().toLowerCase().trim();
-    if (!q) return this.items();
-    return this.items().filter(c => c.nome.toLowerCase().includes(q));
+    const f = this.filters();
+    const nome = f.nome.toLowerCase().trim();
+    const cidade = f.cidade.toLowerCase().trim();
+    const estado = f.estado.toLowerCase().trim();
+    const pais = f.pais.toLowerCase().trim();
+    return this.items().filter(c => {
+      if (nome && !c.nome.toLowerCase().includes(nome)) return false;
+      if (cidade && !(c.cidade || '').toLowerCase().includes(cidade)) return false;
+      if (estado) {
+        const ce = (c.estado || '').toLowerCase().trim();
+        if (estado.length === 2 ? ce !== estado : !ce.includes(estado)) return false;
+      }
+      if (pais && !(c.pais || '').toLowerCase().includes(pais)) return false;
+      return true;
+    });
   });
 
   readonly sorted = computed(() => {
@@ -56,8 +75,19 @@ export class ClubesFacade {
     });
   }
 
+  // Backward compatibility: nome quick filter
   setFilter(value: string) {
-    this.filter.set(value);
+    this.filters.update(f => ({ ...f, nome: value }));
+    this.page.set(1);
+  }
+
+  setFilters(partial: Partial<ClubesFilterState>) {
+    this.filters.update(f => ({ ...f, ...partial }));
+    this.page.set(1);
+  }
+
+  clearFilters() {
+    this.filters.set({ nome: '', cidade: '', estado: '', pais: '' });
     this.page.set(1);
   }
 
