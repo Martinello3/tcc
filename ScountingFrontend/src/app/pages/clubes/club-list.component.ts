@@ -25,6 +25,8 @@ import { DialogService } from '../../services/dialog.service';
     .club-cell { display: grid; grid-template-columns: 56px 1fr 56px; column-gap: 40px; align-items: center; min-height: 56px; }
     .logo-slot { grid-column: 1; justify-self: center; }
     .club-name { grid-column: 2; text-align: center; white-space: normal; word-break: break-word; }
+    .row-click { cursor: pointer; }
+    .row-click:hover { background-color: rgba(255,255,255,.06); }
 
     /* Colunas */
     .w-actions { width: 16%; }

@@ -27,8 +27,20 @@ export class AvaliacaoCalculoService {
     const tat10 = this.round2(tat100 / 10);
 
     const { wFis, wTec, wTat } = this.pesosPorPosicao(posicao || '');
-    const isComplete = fisRes.hasData && tecRes.hasData && tatRes.hasData;
-    const final10 = isComplete ? this.round2(((fis100 * wFis) + (tec100 * wTec) + (tat100 * wTat)) / 10) : null;
+    const hasF = !!fisRes.hasData;
+    const hasTe = !!tecRes.hasData;
+    const hasTa = !!tatRes.hasData;
+    const filledCount = (hasF ? 1 : 0) + (hasTe ? 1 : 0) + (hasTa ? 1 : 0);
+
+    let final10: number | null = null;
+    if (filledCount >= 2) {
+      let sumW = 0;
+      let numer = 0;
+      if (hasF) { sumW += wFis; numer += fis100 * wFis; }
+      if (hasTe) { sumW += wTec; numer += tec100 * wTec; }
+      if (hasTa) { sumW += wTat; numer += tat100 * wTat; }
+      if (sumW > 0) final10 = this.round2(numer / (sumW * 10));
+    }
 
     this.notaFisica.set(fis10);
     this.notaTecnica.set(tec10);

@@ -361,6 +361,7 @@ export class JogadorFormComponent implements OnInit {
   // Preview imediato da foto selecionada
   previewFoto: string | null = null;
   private previewObjectUrl: string | null = null;
+  fotoHover = false;
 
   openLesaoModal() { this.lesaoForm.reset({ descricao: '', dataOcorrencia: '' }); this.showLesaoModal = true; }
   openVideoModal() { this.videoForm.reset(); this.showVideoModal = true; }

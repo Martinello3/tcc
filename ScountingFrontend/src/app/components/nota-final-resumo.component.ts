@@ -21,7 +21,7 @@ import { BlocoInformativoComponent } from './bloco-informativo.component';
         <ng-container *ngIf="notaFinal !== null; else parcial">{{ notaFinal | number:'1.0-2' }}</ng-container>
         <ng-template #parcial>N/A</ng-template>
       </div>
-      <div class="text-muted small" *ngIf="notaFinal===null">Avaliação parcial - complete todas as áreas para calcular a Nota Final</div>
+      <div class="text-muted small" *ngIf="notaFinal===null">Avaliação parcial — preencha pelo menos duas áreas para calcular a Nota Final</div>
     </div>
     <div class="text-end small">
       <div><strong>Física:</strong> {{ fisica | number:'1.0-2' }}</div>
@@ -39,12 +39,12 @@ export class NotaFinalResumoComponent {
 
   // Conteúdos HTML com fórmulas para os blocos informativos
   finalHtml: string = `
-    <p>A Nota Final do jogador é uma média que combina o desempenho dele nas três áreas de avaliação: Física, Técnica e Tática. Cada área tem um peso diferente, dependendo da posição do jogador (como atacante ou zagueiro), para garantir uma avaliação justa e completa.
-    
-    Fórmula: 
-    NotaFinal = (NotaFisica * PesoFisico + NotaTecnica * PesoTecnico + NotaTatica * PesoTatico) / 10. 
-    
-    <span class="text-secondary fw-semibold">Obs: a Nota Final só é calculada quando existe pelo menos uma nota válida em cada uma das três áreas.</span></p>
+    <p>A Nota Final do jogador combina o desempenho nas três áreas de avaliação: Física, Técnica e Tática. Cada área tem um peso diferente conforme a posição do jogador.
+
+    Fórmula geral:
+    NotaFinal = (Σ ÁreasPreenchidas (NotaÁrea × PesoÁrea)) ÷ (10 × Σ ÁreasPreenchidas (PesoÁrea)).
+
+    <span class="text-secondary fw-semibold">Obs: a Nota Final é calculada quando pelo menos duas áreas possuem notas válidas. Áreas vazias são ignoradas (não contam como zero) e os pesos das áreas preenchidas são reponderados.</span></p>
   `;
 
 }

@@ -41,19 +41,28 @@ import { ToastService } from '../../services/toast.service';
             <!-- Foto à esquerda -->
             <div class="col-12 col-sm-auto mb-2 mb-sm-0">
               <label class="form-label d-block">Foto (opcional)</label>
-              <div class="rounded border border-2 bg-white d-flex align-items-center justify-content-center"
+              <div class="position-relative rounded border border-2 bg-white d-flex align-items-center justify-content-center"
                    style="width: 140px; height: 140px; cursor: pointer;"
-                   (click)="fileUsuario.click()">
+                   (click)="fileUsuario.click()" (mouseenter)="fotoHover=true" (mouseleave)="fotoHover=false">
                 @if (previewFoto || foto) {
                   <img [src]="fotoSrc(previewFoto || foto)" alt="foto" style="width: 100%; height: 100%; object-fit: cover; border-radius: .25rem;" />
+                  <button type="button" class="position-absolute top-0 end-0 m-1"
+                          title="Remover foto" aria-label="Remover foto"
+                          (click)="$event.stopPropagation(); removeFoto()"
+                          style="background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: .25rem; padding: .25rem .35rem; transition: opacity .2s;"
+                          [style.opacity]="fotoHover ? 1 : 0">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
                 } @else {
                   <i class="bi bi-plus-lg text-muted"></i>
+                  <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                       style="background: rgba(0,0,0,.45); color: #fff; border-radius: .25rem; transition: opacity .2s;"
+                       [style.opacity]="fotoHover ? 1 : 0">
+                    <i class="bi bi-camera"></i>&nbsp; Alterar Foto
+                  </div>
                 }
               </div>
               <input #fileUsuario type="file" class="d-none" accept="image/*" (change)="uploadUsuarioFoto($event)" />
-              <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="removeFoto()" [disabled]="!(previewFoto || foto)">Remover</button>
-              </div>
             </div>
 
             <!-- Campos ao lado da foto (todos os inputs) -->
@@ -126,6 +135,7 @@ export class RegisterComponent {
   loading = false;
   showSenha = false;
   showConfirmar = false;
+  fotoHover = false;
 
   async uploadUsuarioFoto(evt: Event) {
     const input = evt.target as HTMLInputElement;

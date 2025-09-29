@@ -132,7 +132,6 @@ import { AuthService } from '../../auth/auth.service';
           <div class="card-body">
             <h5 class="mb-3">Atalhos</h5>
             <div class="d-flex flex-column gap-2">
-              <a class="btn btn-secondary" [routerLink]="['/avaliacoes', jogador?.id, 'novo']">Iniciar avaliação</a>
               <a class="btn btn-secondary" [routerLink]="['/avaliacoes', jogador?.id]">Ver histórico</a>
               <a class="btn btn-secondary" [routerLink]="['/jogadores', jogador?.id]">Editar informações</a>
             </div>

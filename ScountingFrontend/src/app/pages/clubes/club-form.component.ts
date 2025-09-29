@@ -32,19 +32,28 @@ import { ToastService } from '../../services/toast.service';
           <!-- Foto à esquerda -->
           <div class="col-12 col-sm-auto">
             <label class="form-label d-block">Foto do clube</label>
-            <div class="rounded border border-2 bg-white d-flex align-items-center justify-content-center"
+            <div class="position-relative rounded border border-2 bg-white d-flex align-items-center justify-content-center"
                  style="width: 160px; height: 160px; cursor: pointer;"
-                 (click)="fileClube.click()">
+                 (click)="fileClube.click()" (mouseenter)="fotoHover=true" (mouseleave)="fotoHover=false">
               @if (previewFoto || form.value.foto) {
                 <img [src]="fotoSrc(previewFoto || form.value.foto)" alt="foto" style="width: 100%; height: 100%; object-fit: cover; border-radius: .25rem;" />
+                <button type="button" class="position-absolute top-0 end-0 m-1"
+                        title="Remover foto" aria-label="Remover foto"
+                        (click)="$event.stopPropagation(); clearFoto()"
+                        style="background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: .25rem; padding: .25rem .35rem; transition: opacity .2s;"
+                        [style.opacity]="fotoHover ? 1 : 0">
+                  <i class="bi bi-x-lg"></i>
+                </button>
               } @else {
                 <i class="bi bi-plus-lg fs-2 text-muted"></i>
+                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                     style="background: rgba(0,0,0,.45); color: #fff; border-radius: .25rem; transition: opacity .2s;"
+                     [style.opacity]="fotoHover ? 1 : 0">
+                  <i class="bi bi-camera"></i>&nbsp; Alterar Foto
+                </div>
               }
             </div>
             <input #fileClube type="file" class="d-none" accept="image/*" (change)="uploadClubeFoto($event)" />
-            <div class="mt-2">
-              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFoto()" [disabled]="!(previewFoto || form.value.foto)">Remover</button>
-            </div>
           </div>
 
           <!-- Campos principais à direita da foto -->
@@ -103,6 +112,7 @@ export class ClubFormComponent implements OnInit {
   // Preview imediato da foto
   previewFoto: string | null = null;
   private previewObjectUrl: string | null = null;
+  fotoHover = false;
 
   paises: string[] = ['Brasil','Argentina','Uruguai','Chile','Paraguai','Colômbia','Peru','Bolívia','Equador','Venezuela','Portugal','Espanha','França','Itália','Alemanha','Inglaterra'];
   estados: string[] = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];

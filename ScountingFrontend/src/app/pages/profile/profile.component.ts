@@ -22,6 +22,8 @@ import { ConfiguracoesComponent } from './configuracoes.component';
     .avatar-ph { width: 128px; height: 128px; border-radius: 50%; display:flex; align-items:center; justify-content:center; }
     .avatar-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45); color: #fff; opacity: 0; display:flex; align-items:center; justify-content:center; border-radius: 50%; transition: opacity .2s; cursor: pointer; }
     .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+    .avatar-remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: .5rem; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center; opacity: 0; transition: opacity .2s; }
+    .avatar-wrap:hover .avatar-remove { opacity: 1; }
 
     .danger-card { border: 1px solid #7f1d1d; background: rgba(239,68,68,.08); }
 
@@ -55,6 +57,9 @@ import { ConfiguracoesComponent } from './configuracoes.component';
             <div class="avatar-wrap" (click)="fileInput.click()">
               @if (avatarUrl) {
                 <img [src]="avatarUrl" alt="Foto do usuário" class="avatar-lg" />
+                <button type="button" class="avatar-remove" title="Remover foto" aria-label="Remover foto" (click)="$event.stopPropagation(); clearAvatar()">
+                  <i class="bi bi-x-lg"></i>
+                </button>
               } @else {
                 <div class="avatar-ph bg-success-subtle text-success" >
                   <i class="bi bi-person" style="font-size: 3rem"></i>
@@ -221,11 +226,14 @@ export class ProfileComponent implements OnInit {
       if (!resp.ok) throw new Error('Falha no upload');
       const data = await resp.json();
       this.foto = data.path as string;
+
       this.toast.success('Foto atualizada');
     } catch {
       this.toast.error('Falha ao enviar a foto do perfil');
     }
   }
+
+  clearAvatar() { this.foto = null; }
 
   onSave() {
     if (this.saving) return;

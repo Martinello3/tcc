@@ -60,10 +60,24 @@ public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbCon
         entity.NotaTaticaComportamental = Round2(tat);
         entity.NotaFisica = Round2(fis);
 
-        // Cálculo ponderado por posição (usa 0..100 na ponderação, divide por 10)
+        // Cálculo ponderado por posição com reponderação e regra de pelo menos 2 áreas
         var (wFis, wTec, wTat) = PesosPorPosicao(posicao);
-        var final = ((fis * 10m) * wFis + (tec * 10m) * wTec + (tat * 10m) * wTat) / 10m;
-        entity.NotaFinal = Round2(final);
+        bool hasFis = entity.Velocidade.HasValue || entity.Resistencia.HasValue || entity.Forca.HasValue;
+        bool hasTec = entity.ControleBola.HasValue || entity.Passe.HasValue || entity.Finalizacao.HasValue || entity.Drible.HasValue;
+        bool hasTat = entity.Posicionamento.HasValue || entity.LeituraJogo.HasValue || entity.TomadaDecisao.HasValue; // Psico excluído
+        int filled = (hasFis ? 1 : 0) + (hasTec ? 1 : 0) + (hasTat ? 1 : 0);
+        if (filled >= 2)
+        {
+            decimal sumW = 0m; decimal numer = 0m;
+            if (hasFis) { sumW += wFis; numer += (fis * 10m) * wFis; }
+            if (hasTec) { sumW += wTec; numer += (tec * 10m) * wTec; }
+            if (hasTat) { sumW += wTat; numer += (tat * 10m) * wTat; }
+            entity.NotaFinal = sumW > 0 ? Round2(numer / (sumW * 10m)) : null;
+        }
+        else
+        {
+            entity.NotaFinal = null;
+        }
 
         // Persiste avaliação principal
         _db.Avaliacoes.Add(entity);
@@ -254,7 +268,23 @@ public class AvaliacoesController(ScoutingDbContext db) : CrudBase<ScoutingDbCon
         entity.NotaFisica = Round2(fis100 / 10m);
         entity.NotaTecnica = Round2(tec100 / 10m);
         entity.NotaTaticaComportamental = Round2(tat100 / 10m);
-        entity.NotaFinal = Round2(((fis100 * wFis) + (tec100 * wTec) + (tat100 * wTat)) / 10m);
+
+        bool hasFis = dto.Fisica != null && dto.Fisica.Count > 0;
+        bool hasTec = dto.Tecnica != null && dto.Tecnica.Count > 0;
+        bool hasTat = dto.TaticaComportamental != null && (dto.TaticaComportamental.Posicionamento.HasValue || dto.TaticaComportamental.LeituraJogo.HasValue || dto.TaticaComportamental.TomadaDecisao.HasValue);
+        int filled = (hasFis ? 1 : 0) + (hasTec ? 1 : 0) + (hasTat ? 1 : 0);
+        if (filled >= 2)
+        {
+            decimal sumW = 0m; decimal numer = 0m;
+            if (hasFis) { sumW += wFis; numer += fis100 * wFis; }
+            if (hasTec) { sumW += wTec; numer += tec100 * wTec; }
+            if (hasTat) { sumW += wTat; numer += tat100 * wTat; }
+            entity.NotaFinal = sumW > 0 ? Round2(numer / (sumW * 10m)) : null;
+        }
+        else
+        {
+            entity.NotaFinal = null;
+        }
 
         _db.Avaliacoes.Add(entity);
         await _db.SaveChangesAsync();

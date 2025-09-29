@@ -41,6 +41,62 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // Admin-only (DEV) endpoints to manage seed/cleanup without requiring psql locally
+    app.MapPost("/admin/cleanup-all", async (IServiceProvider sp) =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ScoutingDbContext>();
+        var sqlPath = Path.Combine(app.Environment.ContentRootPath, "Seeds", "cleanup_all_data.sql");
+        if (!System.IO.File.Exists(sqlPath)) return Results.NotFound(new { message = "cleanup_all_data.sql not found" });
+        var sql = await System.IO.File.ReadAllTextAsync(sqlPath);
+        await db.Database.ExecuteSqlRawAsync(sql);
+        return Results.Ok(new { status = "ok", ran = "cleanup_all_data.sql" });
+    });
+
+    app.MapPost("/admin/seed-core", async (IServiceProvider sp) =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ScoutingDbContext>();
+        var sqlPath = Path.Combine(app.Environment.ContentRootPath, "Seeds", "seed_core_data.sql");
+        if (!System.IO.File.Exists(sqlPath)) return Results.NotFound(new { message = "seed_core_data.sql not found" });
+        var sql = await System.IO.File.ReadAllTextAsync(sqlPath);
+        await db.Database.ExecuteSqlRawAsync(sql);
+        return Results.Ok(new { status = "ok", ran = "seed_core_data.sql" });
+    });
+
+    app.MapPost("/admin/seed-evals", async (IServiceProvider sp) =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ScoutingDbContext>();
+        var sqlPath = Path.Combine(app.Environment.ContentRootPath, "Seeds", "sample_evaluations.sql");
+        if (!System.IO.File.Exists(sqlPath)) return Results.NotFound(new { message = "sample_evaluations.sql not found" });
+        var sql = await System.IO.File.ReadAllTextAsync(sqlPath);
+        await db.Database.ExecuteSqlRawAsync(sql);
+        return Results.Ok(new { status = "ok", ran = "sample_evaluations.sql" });
+    });
+
+    app.MapPost("/admin/fix-ages", async (IServiceProvider sp) =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ScoutingDbContext>();
+        var sqlPath = Path.Combine(app.Environment.ContentRootPath, "Seeds", "fix_player_ages.sql");
+        if (!System.IO.File.Exists(sqlPath)) return Results.NotFound(new { message = "fix_player_ages.sql not found" });
+        var sql = await System.IO.File.ReadAllTextAsync(sqlPath);
+        await db.Database.ExecuteSqlRawAsync(sql);
+        return Results.Ok(new { status = "ok", ran = "fix_player_ages.sql" });
+    });
+
+    app.MapPost("/admin/fix-positions", async (IServiceProvider sp) =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ScoutingDbContext>();
+        var sqlPath = Path.Combine(app.Environment.ContentRootPath, "Seeds", "fix_player_positions.sql");
+        if (!System.IO.File.Exists(sqlPath)) return Results.NotFound(new { message = "fix_player_positions.sql not found" });
+        var sql = await System.IO.File.ReadAllTextAsync(sqlPath);
+        await db.Database.ExecuteSqlRawAsync(sql);
+        return Results.Ok(new { status = "ok", ran = "fix_player_positions.sql" });
+    });
 }
 
 // app.UseHttpsRedirection();
