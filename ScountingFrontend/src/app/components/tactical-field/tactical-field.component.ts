@@ -1,4 +1,4 @@
-import { Component, Signal, signal, computed, inject, effect } from '@angular/core';
+import { Component, Signal, signal, computed, inject, effect, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlayerCardComponent } from './player-card.component';
 import { FormationsService } from '../../services/formations.service';
@@ -29,7 +29,7 @@ export interface PlayerInFormation { playerId?: number; positionId: string; play
           </select>
         </div>
         <div class="controls-bottom">
-          <button class="fifa-btn fifa-btn-outline" title="Exportar PDF (em breve)">
+          <button class="fifa-btn fifa-btn-outline" (click)="onExportClick()" title="Exportar PDF">
             <i class="bi bi-filetype-pdf"></i>
             <span class="btn-text">Exportar PDF</span>
           </button>
@@ -116,6 +116,15 @@ export class TacticalFieldComponent {
   private notificationService = inject(NotificationService);
   private formationStorageService = inject(FormationStorageService);
   private lineupState = inject(LineupStateService);
+
+  @Output() exportPdf = new EventEmitter<void>();
+
+  onExportClick() {
+    console.log('=== Botão Exportar PDF clicado no TacticalField ===');
+    this.exportPdf.emit();
+  }
+
+
 
   private autoSaveEnabled = signal(true);
   private hasUnsavedChanges = signal(false);
