@@ -76,6 +76,13 @@ import { ThemeService } from '../../services/theme.service';
           <span class="menu-text">Clubes</span>
         </a>
       </li>
+	      <li class="menu-item">
+	        <a class="menu-link" routerLink="/escalacao" routerLinkActive="active-link">
+	          <i class="bi bi-diagram-3"></i>
+	          <span class="menu-text">Escalação</span>
+	        </a>
+	      </li>
+
     </ul>
     <div class="divider"></div>
     <div class="dropdown" #profileDrop>

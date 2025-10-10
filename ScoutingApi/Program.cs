@@ -76,6 +76,17 @@ if (app.Environment.IsDevelopment())
         return Results.Ok(new { status = "ok", ran = "sample_evaluations.sql" });
     });
 
+    app.MapPost("/admin/seed-eval-details", async (IServiceProvider sp) =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ScoutingDbContext>();
+        var sqlPath = Path.Combine(app.Environment.ContentRootPath, "Seeds", "seed_evaluation_details.sql");
+        if (!System.IO.File.Exists(sqlPath)) return Results.NotFound(new { message = "seed_evaluation_details.sql not found" });
+        var sql = await System.IO.File.ReadAllTextAsync(sqlPath);
+        await db.Database.ExecuteSqlRawAsync(sql);
+        return Results.Ok(new { status = "ok", ran = "seed_evaluation_details.sql" });
+    });
+
     app.MapPost("/admin/fix-ages", async (IServiceProvider sp) =>
     {
         using var scope = sp.CreateScope();

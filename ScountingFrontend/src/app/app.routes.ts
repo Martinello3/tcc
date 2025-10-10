@@ -29,7 +29,9 @@ export const routes: Routes = [
 
       { path: 'profile/config', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
       { path: 'profile/conta', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
-      { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) }
+      { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
+      { path: 'escalacao', loadComponent: () => import('./pages/escalacao/team-lineup.component').then(m => m.TeamLineupComponent) },
+
     ]
   },
   { path: '**', redirectTo: '' }
