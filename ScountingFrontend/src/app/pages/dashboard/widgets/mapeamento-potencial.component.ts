@@ -1,81 +1,77 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { AvaliacoesService } from '../../../services/avaliacoes.service';
 import { JogadoresService } from '../../../services/jogadores.service';
-import type { Avaliacao } from '../../../models/avaliacao';
+import { NgApexchartsModule } from 'ng-apexcharts';
+import type { ApexChart, ApexNonAxisChartSeries, ApexResponsive, ApexTooltip, ApexTheme, ApexPlotOptions, ApexFill, ApexStroke, ApexLegend, ApexDataLabels } from 'ng-apexcharts';
 
-interface DayPoint { date: Date; key: string; elite: number; promising: number; observe: number; total: number; }
+type PeriodCode = '30d' | '6m' | 'all';
+interface Counts { elite: number; altoPotencial: number; emObservacao: number; recemAdicionados: number; total: number; }
+
+const CATEGORIES: { key: keyof Omit<Counts,'total'>; label: string; color: string }[] = [
+  { key: 'elite', label: 'Elite', color: '#10B981' },
+  { key: 'altoPotencial', label: 'Alto Potencial', color: '#3B82F6' },
+  { key: 'emObservacao', label: 'Em Observação', color: '#F59E0B' },
+  { key: 'recemAdicionados', label: 'Recém Adicionados', color: '#D1D5DB' },
+];
 
 @Component({
   selector: 'app-mapeamento-potencial-widget',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NgApexchartsModule],
   styles: [`
-    .muted { color: var(--text-muted); }
-    .chart-wrap { position: relative; width: 100%; height: 260px; }
-    svg { width: 100%; height: 100%; display: block; }
-    .legend-floating { position:absolute; top:8px; right:8px; background: rgba(255,255,255,.85); color:#0b0f14; border:1px solid var(--border); border-radius: 8px; padding: 6px 8px; display:flex; gap:10px; align-items:center; }
-    :host-context(body.dark) .legend-floating { background: rgba(17,24,39,.75); color: #e5e7eb; border-color: rgba(255,255,255,.12); }
-    .legend-item { display:inline-flex; align-items:center; gap:6px; cursor:pointer; user-select:none; font-size: .82rem; font-weight:600; }
-    .legend-item.inactive { opacity:.45; text-decoration: line-through; }
-    .dot { width: 10px; height: 10px; border-radius: 2px; display:inline-block; }
-    .tooltip { position: absolute; pointer-events: none; background: #111827; color: #e5e7eb; border: 1px solid rgba(255,255,255,.12); padding: .5rem .6rem; border-radius: .5rem; font-size: .8rem; white-space: nowrap; transform: translate(-50%, -115%); }
-    .axis-label { font-size: 10px; fill: currentColor; opacity: .7; }
+    .card-head { position: relative; }
+    .filter-select { min-width: 180px; }
+    .muted { color: var(--text-muted, #6b7280); }
+    .donut-wrap { position: relative; min-height: 200px; }
+    .fade-out { opacity: .35; filter: blur(.2px); transform: scale(.995); transition: opacity .2s ease, filter .2s ease, transform .2s ease; }
+    .fade-in { animation: donutFadeIn .6s ease-out; }
+    @keyframes donutFadeIn { from { opacity:.01; transform:scale(.98);} to { opacity:1; transform:scale(1);} }
+    .skeleton { display:grid; place-items:center; min-height: 200px; }
+    .skel-circle { width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.6), transparent 40%), var(--border, #e5e7eb); animation: pulse 1.2s infinite ease-in-out; }
+    @keyframes pulse { 0%,100%{ opacity:.6 } 50%{ opacity:1 } }
+    :host-context(body.dark) .skel-circle { background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), transparent 40%), rgba(255,255,255,.06); }
+    .empty { text-align:center; padding:28px 0; opacity:.85; }
+    /* Forçar textos da legenda do ApexCharts a ficarem brancos no tema escuro */
+    :host ::ng-deep .apexcharts-legend-text { color: #ffffff !important; fill: #ffffff !important; opacity: 1 !important; }
   `],
   template: `
   <div class="card h-100">
     <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <h5 class="m-0"><i class="bi bi-graph-up-arrow text-success"></i> Mapeamento de Potencial</h5>
+      <div class="mb-1 card-head">
+        <h5 class="m-0"><i class="bi bi-pie-chart-fill" style="color:#10B981"></i> Distribuição de Talentos</h5>
+        <div class="mt-2" style="max-width: 220px;">
+          <select class="form-select form-select-sm filter-select" style="border:1px solid var(--border); background: var(--bg-elevated, transparent); color: inherit;" [value]="period()" (change)="onPeriodChange(($any($event.target)).value)">
+            <option value="30d">Últimos 30 dias</option>
+            <option value="6m">Últimos 6 meses</option>
+            <option value="all">Desde o início</option>
+          </select>
+        </div>
       </div>
-      <div class="small muted mb-3">Visão geral por categoria — gráfico único (últimos 30 dias)</div>
+
+
       @if (loading()) {
-        <div class="muted">Carregando dados...</div>
+        <div class="skeleton"><div class="skel-circle"></div></div>
       } @else if (error()) {
         <div class="text-danger small">{{ error() }}</div>
-      } @else if (noData()) {
-        <div class="muted">Sem avaliações nos últimos 30 dias.</div>
-      } @else {
-        <div class="d-flex justify-content-end align-items-center gap-3 mb-2 legend-row">
-          <span class="legend-item" [class.inactive]="!showElite" (click)="toggle('elite')" title="Jogadores Elite: desempenho excepcional (nota final >= 8.0)">
-            <span class="dot" [style.background]="colors.elite"></span> Elite
-          </span>
-          <span class="legend-item" [class.inactive]="!showPromising" (click)="toggle('promising')" title="Jogadores Promissores: em ascensão (nota final entre 7.0 e 7.9)">
-            <span class="dot" [style.background]="colors.promising"></span> Promissores
-          </span>
-          <span class="legend-item" [class.inactive]="!showObserve" (click)="toggle('observe')" title="Em Observação: acompanhar evolução (nota final abaixo de 7.0)">
-            <span class="dot" [style.background]="colors.observe"></span> Observação
-          </span>
+      } @else if (counts().total === 0) {
+        <div class="empty">
+          <i class="bi bi-pie-chart" style="font-size:48px; opacity:.3;"></i>
+          <div class="fw-semibold mt-2">Nenhum jogador cadastrado ainda</div>
         </div>
-
-        <div class="chart-wrap" (mousemove)="onMove($event)" (mouseleave)="tooltipVisible=false">
-          <svg [attr.viewBox]="'0 0 ' + vbW + ' ' + vbH" preserveAspectRatio="none">
-            <g>
-              <line x1="40" [attr.y1]="vbH-30" [attr.x2]="vbW-10" [attr.y2]="vbH-30" stroke="rgba(0,0,0,.15)" />
-              <line x1="40" y1="16" x2="40" [attr.y2]="vbH-30" stroke="rgba(0,0,0,.15)" />
-              @for (t of yTicks(); track t) {
-                <line x1="40" [attr.y1]="yPos(t)" [attr.x2]="vbW-10" [attr.y2]="yPos(t)" stroke="rgba(0,0,0,.06)" />
-                <text class="axis-label" text-anchor="end" x="38" [attr.y]="yPos(t)+3">{{ t }}</text>
-              }
-              @for (i of xTicksIdx(); track i) {
-                <line [attr.x1]="xAt(i)" y1="16" [attr.x2]="xAt(i)" [attr.y2]="vbH-30" stroke="rgba(0,0,0,.04)" />
-                <text class="axis-label" text-anchor="middle" [attr.x]="xAt(i)" [attr.y]="vbH-16">{{ dateLabel(i) }}</text>
-              }
-            </g>
-            @if (showObserve) { <path [attr.d]="linePath('observe')" [attr.stroke]="colors.observe" stroke-width="2" fill="none"></path> }
-            @if (showPromising) { <path [attr.d]="linePath('promising')" [attr.stroke]="colors.promising" stroke-width="2" fill="none"></path> }
-            @if (showElite) { <path [attr.d]="linePath('elite')" [attr.stroke]="colors.elite" stroke-width="2" fill="none"></path> }
-          </svg>
-          @if (tooltipVisible) {
-            <div class="tooltip" [style.left.px]="tooltipX" [style.top.px]="tooltipY">
-              <div class="fw-semibold">{{ hoverDate }}</div>
-              <div><span class="dot" [style.background]="colors.elite"></span> Elite: {{ hoverElite }}</div>
-              <div><span class="dot" [style.background]="colors.promising"></span> Promissores: {{ hoverPromising }}</div>
-              <div><span class="dot" [style.background]="colors.observe"></span> Observação: {{ hoverObserve }}</div>
-              <div class="mt-1">Total: {{ hoverTotal }}</div>
-            </div>
-          }
+      } @else {
+        <div class="donut-wrap" [class.fade-out]="transitioning() && !loading()" [class.fade-in]="justLoaded()">
+          <apx-chart
+            [series]="series()"
+            [chart]="chartOptions.chart"
+            [labels]="chartOptions.labels"
+            [colors]="chartOptions.colors"
+            [tooltip]="chartOptions.tooltip"
+            [theme]="chartOptions.theme"
+            [plotOptions]="chartOptions.plotOptions"
+            [responsive]="chartOptions.responsive">
+          </apx-chart>
         </div>
       }
     </div>
@@ -86,137 +82,192 @@ export class MapeamentoPotencialWidgetComponent implements OnInit {
   private avalSvc = inject(AvaliacoesService);
   private jogSvc = inject(JogadoresService);
 
+  private readonly LS_KEY = 'talents-donut-period';
+
   loading = signal(true);
   error = signal<string | null>(null);
+  period = signal<PeriodCode>(this.getSavedPeriod());
+  transitioning = signal(false);
+  justLoaded = signal(false);
 
-  // last 30 days (ascending)
-  private days: Date[] = [];
-  private dayKeys: string[] = [];
+  counts = signal<Counts>({ elite:0, altoPotencial:0, emObservacao:0, recemAdicionados:0, total:0 });
+  series = signal<ApexNonAxisChartSeries>([0,0,0,0]);
 
-  points = signal<DayPoint[]>([]);
-  maxY = signal(0);
-
-  readonly colors = {
-    elite: '#F59E0B',      // gold
-    promising: '#3B82F6',  // blue
-    observe: '#6B7280'     // gray
-  } as const;
-
-  // svg viewbox
-  vbW = 900;
-  vbH = 240;
-
-  tooltipVisible = false;
-  tooltipX = 0; tooltipY = 0;
-  hoverDate = '';
-  hoverElite = 0; hoverPromising = 0; hoverObserve = 0; hoverTotal = 0;
+  chartOptions: { chart: ApexChart; labels: string[]; colors: string[]; tooltip: ApexTooltip; theme: ApexTheme; plotOptions: ApexPlotOptions; responsive: ApexResponsive[]; fill?: ApexFill; stroke?: ApexStroke; legend?: ApexLegend; dataLabels?: ApexDataLabels; states?: any } =
+    { chart:{} as ApexChart, labels:[], colors:[], tooltip:{} as ApexTooltip, theme:{} as ApexTheme, plotOptions:{} as ApexPlotOptions, responsive:[] };
 
   ngOnInit(): void {
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      d.setHours(0,0,0,0);
-      this.days.push(d);
-      this.dayKeys.push(this.key(d));
-    }
-    this.load();
+    this.initChartOptions();
+    this.load(this.period());
+
+    // observar mudanças de tema via body.dark
+    try {
+      const obs = new MutationObserver(() => this.applyTheme());
+      obs.observe(document.body, { attributes:true, attributeFilter:['class'] });
+    } catch {}
   }
 
-  private async load() {
+  onPeriodChange(v: string) {
+    const val: PeriodCode = v==='6m' ? '6m' : (v==='all' ? 'all' : '30d');
+    this.period.set(val);
+    try { localStorage.setItem(this.LS_KEY, val); } catch {}
+    this.transitioning.set(true);
+    setTimeout(() => this.load(val), 200);
+  }
+
+  private getSavedPeriod(): PeriodCode {
+    try { const v = localStorage.getItem(this.LS_KEY) as PeriodCode | null; if (v==='30d'||v==='6m'||v==='all') return v; } catch {}
+    return '30d';
+  }
+
+  private initChartOptions() {
+    const prefersReduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
+    const textColor = isDark ? '#e5e7eb' : '#111827';
+    const strokeColor = isDark ? '#1f2937' : '#ffffff';
+    this.chartOptions = {
+      chart: { type:'donut', height: 220, background: 'transparent', animations:{ enabled: !prefersReduced, speed:800 }, toolbar:{ show:false } },
+      labels: CATEGORIES.map(c => c.label),
+      colors: CATEGORIES.map(c => c.color),
+      tooltip: {
+        y: { formatter: (val: number) => {
+          const total = this.counts().total || 1;
+          const pct = (val / total) * 100;
+          return `${val} jogadores (${pct.toFixed(1)}%)`;
+        }}
+      },
+      dataLabels: { enabled: false },
+      legend: { show: true, position: 'bottom', horizontalAlign: 'center', fontSize: '12px', labels: { colors: '#ffffff' }, itemMargin: { horizontal: 10, vertical: 4 }, offsetY: -12, onItemHover: { highlightDataSeries: false }, onItemClick: { toggleDataSeries: true },
+        formatter: (seriesName: string, opts?: any) => {
+          try {
+            const idx = opts?.seriesIndex ?? 0;
+            const val = Number(this.series()[idx] || 0);
+            const total = this.counts().total || 0;
+            const pct = total ? (val / total) * 100 : 0;
+            const plural = val === 1 ? 'jogador' : 'jogadores';
+            const maxName = 20; // aproxima alinhamento com "dots"
+            const gap = Math.max(2, maxName - seriesName.length);
+            const dots = '.'.repeat(gap);
+            return `${seriesName} ${dots} ${val} ${plural} (${pct.toFixed(1)}%)`;
+          } catch {
+            return seriesName;
+          }
+        }
+      },
+      theme: { mode: isDark ? 'dark' : 'light' },
+      states: { hover: { filter: { type: 'lighten', value: 0.1 } } },
+      fill: { opacity: 1 },
+      stroke: { show: true, width: 3, colors: [strokeColor] },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '68%',
+            labels: {
+              show: true,
+              name: { show: false },
+              value: { show: true, fontWeight: 700, fontSize: '30px', color: '#ffffff', formatter: () => `${this.counts().total}` },
+              total: { show: true, showAlways: true, label: 'Total de Jogadores', fontSize: '12px', color: '#ffffff', formatter: () => `${this.counts().total}` }
+            }
+          },
+          expandOnClick: false
+        }
+      },
+      responsive: [
+        { breakpoint: 768, options: { chart: { width: '100%' }, plotOptions: { pie: { donut: { size: '72%' } } } } }
+      ]
+    };
+  }
+
+  private applyTheme() {
+    const isDark = document.body.classList.contains('dark');
+    const textColor = isDark ? '#e5e7eb' : '#111827';
+    this.chartOptions = {
+      ...this.chartOptions,
+      theme: { mode: isDark ? 'dark' : 'light' },
+      legend: { ...(this.chartOptions.legend as any), labels: { colors: '#ffffff' }, position: 'bottom', horizontalAlign: 'center', offsetY: -12, itemMargin: { horizontal: 10, vertical: 4 } },
+      stroke: { ...(this.chartOptions.stroke as any), show: true, width: 3, colors: [isDark ? '#1f2937' : '#ffffff'] },
+      plotOptions: {
+        ...this.chartOptions.plotOptions,
+        pie: {
+          ...this.chartOptions.plotOptions.pie,
+          donut: {
+            ...this.chartOptions.plotOptions.pie?.donut,
+            labels: {
+              ...this.chartOptions.plotOptions.pie?.donut?.labels,
+              value: { ...(this.chartOptions.plotOptions.pie?.donut?.labels as any)?.value, color: '#ffffff' },
+              name: { ...(this.chartOptions.plotOptions.pie?.donut?.labels as any)?.name, color: '#ffffff' },
+              total: { ...(this.chartOptions.plotOptions.pie?.donut?.labels as any)?.total, color: '#ffffff' }
+            }
+          }
+        }
+      }
+    };
+  }
+
+  private inPeriod(d: Date, periodo: PeriodCode): boolean {
+    if (periodo === 'all') return true;
+    const now = new Date();
+    if (periodo === '30d') { const min = new Date(now); min.setDate(min.getDate()-30); min.setHours(0,0,0,0); return d >= min; }
+    const min = new Date(now); min.setMonth(min.getMonth()-6); min.setHours(0,0,0,0); return d >= min;
+  }
+
+  private bucketFromNota(n: number): keyof Omit<Counts,'total'> {
+    if (n >= 8) return 'elite';
+    if (n >= 7) return 'altoPotencial';
+    if (n >= 5) return 'emObservacao';
+    return 'recemAdicionados';
+  }
+
+  async load(periodo: PeriodCode) {
     try {
       this.loading.set(true);
+      this.error.set(null);
+
       const jogadores = await firstValueFrom(this.jogSvc.list());
-      const lastDate = this.days[this.days.length-1];
-      const firstDate = this.days[0];
-      const latestByPlayer: Map<number, Avaliacao> = new Map();
+      const counts: Counts = { elite:0, altoPotencial:0, emObservacao:0, recemAdicionados:0, total:0 };
 
-      const promises = (jogadores || []).map(async j => {
-        const list = await firstValueFrom(this.avalSvc.byJogador(j.id));
-        const arr = (list || []).filter(a => {
-          const d = new Date(a.data);
-          return d >= firstDate && d <= new Date(lastDate.getTime() + 24*3600*1000 - 1);
-        }).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-        if (arr.length > 0) latestByPlayer.set(j.id, arr[0]);
-      });
-      await Promise.all(promises);
-
-      // Build counts by day for latest evaluation per player
-      const dayAdditions = new Map<string, { elite: number; promising: number; observe: number }>();
-      this.dayKeys.forEach(k => dayAdditions.set(k, { elite:0, promising:0, observe:0 }));
-
-      latestByPlayer.forEach(a => {
-        const k = this.key(new Date(a.data));
-        const nota = (a.notaFinal ?? 0);
-        const bucket = nota >= 8 ? 'elite' : (nota >= 7 ? 'promising' : 'observe');
-        const obj = dayAdditions.get(k);
-        if (obj) (obj as any)[bucket]++;
-      });
-
-      // cumulative step counts
-      const pts: DayPoint[] = [];
-      let cumElite = 0, cumProm = 0, cumObs = 0;
-      for (const d of this.days) {
-        const k = this.key(d);
-        const add = dayAdditions.get(k)!;
-        cumElite += add.elite;
-        cumProm += add.promising;
-        cumObs += add.observe;
-        const total = cumElite + cumProm + cumObs;
-        pts.push({ date: new Date(d), key: k, elite: cumElite, promising: cumProm, observe: cumObs, total });
+      if (!jogadores || jogadores.length === 0) {
+        this.counts.set(counts);
+        this.series.set([0,0,0,0]);
+        this.loading.set(false);
+        this.transitioning.set(false);
+        this.justLoaded.set(true); setTimeout(()=>this.justLoaded.set(false), 600);
+        return;
       }
-      const max = pts.reduce((m,p)=> Math.max(m, p.total), 0);
-      this.maxY.set(Math.max(1, max));
-      this.points.set(pts);
+
+      const tasks = jogadores.map(async (j: any) => {
+        const list = await firstValueFrom(this.avalSvc.byJogador(j.id));
+        const arr = (list||[]).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        const latest = arr[0];
+        if (!latest) { counts.recemAdicionados++; counts.total++; return; }
+        const d = new Date(latest.data);
+        if (!this.inPeriod(d, periodo)) { counts.recemAdicionados++; counts.total++; return; }
+        const nota = latest?.notaFinal ?? j?.notaGeral ?? null;
+        if (nota == null || isNaN(Number(nota))) { counts.recemAdicionados++; counts.total++; return; }
+        const bucket = this.bucketFromNota(Number(nota));
+        counts[bucket]++; counts.total++;
+      });
+
+      await Promise.all(tasks);
+
+      this.counts.set(counts);
+      this.series.set([
+        counts.elite,
+        counts.altoPotencial,
+        counts.emObservacao,
+        counts.recemAdicionados
+      ]);
+
+      this.initChartOptions();
+
       this.loading.set(false);
+      this.transitioning.set(false);
+      this.justLoaded.set(true); setTimeout(()=>this.justLoaded.set(false), 600);
     } catch (e) {
-      this.error.set('Falha ao carregar dados');
+      this.error.set('Não foi possível carregar os dados do período selecionado.');
       this.loading.set(false);
+      this.transitioning.set(false);
     }
-  }
-
-  private key(d: Date) { return d.toISOString().substring(0,10); }
-
-
-  // Series visibility toggles
-  showElite = true; showPromising = true; showObserve = true;
-
-  // Helpers for unified chart
-  private seriesVal(p: DayPoint, s: 'elite'|'promising'|'observe') { return s==='elite'?p.elite : s==='promising'?p.promising : p.observe; }
-  private left = 40; private top = 16;
-  private right() { return this.vbW - 10; }
-  private bottom() { return this.vbH - 30; }
-  xAt(i: number): number { const pts = this.points(); const w = this.right() - this.left; const n = Math.max(pts.length - 1, 1); return this.left + (w / n) * i; }
-  yPos(value: number): number { const h = this.bottom() - this.top; const max = this.maxY(); return this.bottom() - (value / max) * h; }
-  yFor(s: 'elite'|'promising'|'observe', i: number): number { const p = this.points()[i]; return this.yPos(this.seriesVal(p, s)); }
-  linePath(s: 'elite'|'promising'|'observe'): string { const pts = this.points(); if (!pts.length) return ''; let d = `M ${this.xAt(0)} ${this.yFor(s,0)}`; for (let i=1;i<pts.length;i++){ d += ` L ${this.xAt(i)} ${this.yFor(s,i-1)}`; d += ` L ${this.xAt(i)} ${this.yFor(s,i)}`; } return d; }
-
-  xTicksIdx = computed(() => { const pts = this.points(); const idxs: number[] = []; for (let i=0;i<pts.length;i++){ if (i === 0 || i === pts.length-1 || i % 5 === 0) idxs.push(i);} return idxs; });
-  yTicks = computed(() => { const max = this.maxY(); const steps = 4; const step = Math.max(1, Math.ceil(max/steps)); const arr:number[] = []; for (let v=0; v<=max; v+=step) arr.push(v); if (arr[arr.length-1] !== max) arr.push(max); return arr; });
-  dateLabel(i: number): string { const p = this.points()[i]; if (!p) return ''; const d = p.date; const day = String(d.getDate()).padStart(2,'0'); const month = String(d.getMonth()+1).padStart(2,'0'); return `${day}/${month}`; }
-  toggle(s: 'elite'|'promising'|'observe') { if (s==='elite') this.showElite = !this.showElite; else if (s==='promising') this.showPromising = !this.showPromising; else this.showObserve = !this.showObserve; }
-
-
-
-  noData(): boolean { return this.points().length > 0 ? this.points().every(p => p.total === 0) : true; }
-
-  onMove(e: MouseEvent) {
-    const host = (e.currentTarget as HTMLElement);
-    const rect = host.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const left = 40, right = rect.width - 10; // approximate to DOM size
-    const w = right - left;
-    const idx = Math.max(0, Math.min(this.points().length - 1, Math.round(((x - left) / w) * (this.points().length - 1))));
-    const p = this.points()[idx];
-    if (!p) { this.tooltipVisible = false; return; }
-    this.tooltipVisible = true;
-    this.tooltipX = e.clientX - rect.left; // relative
-    this.tooltipY = 40; // fixed offset from top of chart area
-    this.hoverDate = p.date.toLocaleDateString('pt-BR');
-    this.hoverElite = p.elite;
-    this.hoverPromising = p.promising;
-    this.hoverObserve = p.observe;
-    this.hoverTotal = p.total;
   }
 }
 

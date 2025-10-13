@@ -20,7 +20,7 @@ import { ActivityService, ActivityItem } from '../../services/activity.service';
   <div class="card shadow-sm h-100">
     <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
       <div class="fw-semibold"><i class="bi bi-clock-history text-success"></i> Atividade Recente</div>
-      <div class="small text-muted">\u00faltimas 5</div>
+      <div class="small text-muted">\Últimas 5</div>
     </div>
     <div class="card-body">
       @if (loading()) {
@@ -41,9 +41,6 @@ import { ActivityService, ActivityItem } from '../../services/activity.service';
           }
         </div>
       }
-    </div>
-    <div class="card-footer bg-transparent border-0 d-flex justify-content-end">
-      <a class="small text-decoration-none" routerLink="/relatorios">Ver tudo \u2192</a>
     </div>
   </div>
   `

@@ -22,8 +22,8 @@ import { MapeamentoPotencialWidgetComponent } from './widgets/mapeamento-potenci
 
   <div class="row g-3 mt-2">
     <div class="col-md-8 d-flex flex-column gap-3">
-      <app-focused-players-widget />
       <app-mapeamento-potencial-widget />
+      <app-focused-players-widget />
       <app-recent-activity-widget />
     </div>
     <div class="col-md-4">
